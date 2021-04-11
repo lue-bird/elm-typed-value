@@ -2,7 +2,11 @@
 
 > Create type-safe aliases for primitive types
 
-Fundamental concepts are similar to [Prior art](#Prior-Art).
+Fundamental concepts are similar to [Prior art](#Prior-Art):
+
+A value is wrapped in a `type` with a phantom `tag`, so that a `Tagged A Int` is not a `Tagged B Int`.
+
+There are 3 containers in this package 
 
 - `ReadOnly`:
     - only its value can be read everywhere
