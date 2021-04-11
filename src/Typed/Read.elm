@@ -35,11 +35,11 @@ type alias ReadOnly tag value =
     Typed tag value { read : Allowed, write : NotAllowed }
 
 
-{-| Enable writing to a `ReadOnly`. You'll need this in the module your tag located.
+{-| Enable writing to a `ReadOnly`. You can use this in the module your tag located.
 
 The first argument, the `tag` verifies that you are in the module that is allowed to modify a `ReadOnly`.
 
-    module DivisibleBy2 exposing (DivisibleBy2, two)
+    module DivisibleBy2 exposing (DivisibleBy2, add)
 
     type alias DivisibleBy2 =
         ReadOnly DivisibleBy2Tag Int
@@ -48,10 +48,10 @@ The first argument, the `tag` verifies that you are in the module that is allowe
     type DivisibleBy2Tag
         = DivisibleBy2
 
-    two : DivisibleBy2
-    two =
-        ReadWrite.readOnly DivisibleBy2
-            (ReadWrite.tag 2)
+    add : DivisibleBy2 -> DivisibleBy2 -> DivisibleBy2
+    add toAdd =
+        Read.write DivisibleBy2
+            >> ReadWrite.map2 (+) toAdd
 
 -}
 write : tag -> ReadOnly tag value -> ReadWrite tag value
@@ -80,7 +80,7 @@ value =
         ReadWrite.readOnly PrimeNumber
             (ReadWrite.tag 5)
 
-In another module
+Everywhere
 
     Read.values2 (+) prime3 prime5
     --> 8
