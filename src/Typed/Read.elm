@@ -9,8 +9,6 @@ module Typed.Read exposing
 
 ## read
 
-Can be scanned.
-
 @docs Readable
 
 @docs value, values2
@@ -28,7 +26,7 @@ import Internal exposing (Allowed, NotAllowed, ReadWrite, Typed(..))
 {-| Accessing its value is allowed.
 -}
 type alias Readable tag value write =
-    Typed tag value { write | read : Allowed }
+    Typed tag value { write : write, read : Allowed }
 
 
 {-| Creating or updating instances isn't allowed.
