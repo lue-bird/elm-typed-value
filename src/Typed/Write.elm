@@ -25,7 +25,7 @@ import Internal exposing (Allowed, NotAllowed, ReadWrite, Typed(..))
 {-| Allow updating creating new instances or.
 -}
 type alias Writable tag value read =
-    Typed tag value { read : read, write : Allowed }
+    Typed tag value { read | write : Allowed }
 
 
 {-| Using its value isn't allowed.

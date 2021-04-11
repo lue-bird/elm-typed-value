@@ -26,7 +26,7 @@ import Internal exposing (Allowed, NotAllowed, ReadWrite, Typed(..))
 {-| Accessing its value is allowed.
 -}
 type alias Readable tag value write =
-    Typed tag value { write : write, read : Allowed }
+    Typed tag value { write | read : Allowed }
 
 
 {-| Creating or updating instances isn't allowed.
@@ -90,9 +90,9 @@ In another module
 
 -}
 values2 :
-    (aReadWriteue -> bReadWriteue -> resultReadWriteue)
-    -> Readable aTag aReadWriteue aWrite
-    -> Readable bTag bReadWriteue bWrite
-    -> resultReadWriteue
+    (aValue -> bValue -> resultValue)
+    -> Readable aTag aValue aWrite
+    -> Readable bTag bValue bWrite
+    -> resultValue
 values2 binOp aReadWrite bReadWrite =
     binOp (value aReadWrite) (value bReadWrite)
