@@ -4,61 +4,56 @@
 
 Fundamental concepts are similar to [Prior art](#Prior-Art).
 
-The type can control:
-
 - `ReadOnly`:
     - only its value can be read everywhere
-    - creating new ones & calling `map`, `andThen` is only possible inside the module
+    - creating new ones & updating is only possible inside the module
 - `WriteOnly`:
-    - `map`, `andThen` can be called outside the module
-    -  its value can only be read everywhere
+    - can be updated everywhere
+    - its value can never be read
 - `ReadWrite`:
     - you can both access the value & create new ones
 
 → additional type-safety.
 
-## Examples
+## examples
 
 ```elm
-import Val exposing (Val, ReadWrite, ReadOnly, WriteOnly)
+import Typed.ReadWrite as ReadWrite exposing (ReadWrite)
+import Typed.Write as Write exposing (WriteOnly)
+import Typed.Read as Read exposing (ReadOnly)
 ```
 
-### ReadWrite
+### `ReadWrite`
 
 Basically a `type alias` with a phantom tag:
 
 ```elm
-module Length exposing (Length, Meters, Millimeters, metersToMillimeters)
-
 type alias Length unit =
-    Val unit Float ReadWrite
+    ReadWrite unit Float
 
 type Meters = Meters Never
 type Millimeters = Millimeters Never
 
--- this annotation is importatnt
+-- you need to use a annotation
 metersToMillimeters : Length Meters -> Length Millimeters
-metersToMillimeters meters =
-    meters |> Val.map ((*) 1000)
-```
+metersToMillimeters =
+    Read.value >> (*) 1000 >> ReadWrite.tag
 
-Then anywhere:
-
-```elm
 -- annotate to set the unit
 heightEiffelTower : Length Meters
 heightEiffelTower =
-    300 |> Val.tag
+    300 |> ReadWrite.tag
 ```
 
-### ReadOnly
+### `ReadOnly`
 
 ```elm
+-- must be in a seperate module
 module DivisibleBy2 exposing
-    (DivisibleBy2, multiply, add, zero, two)
+    ( DivisibleBy2, multiply, add, zero, two )
 
 type alias DivisibleBy2 =
-    Val DivisibleBy2Tag Int ReadOnly
+    ReadOnly DivisibleBy2Tag Int
 
 -- don't expose this
 type DivisibleBy2Tag =
@@ -66,21 +61,23 @@ type DivisibleBy2Tag =
 
 multiply : Int -> DivisibleBy2 -> DivisibleBy2
 multiply int =
-    Val.write DivisibleBy2
-        |> Val.map ((*) int)
+    ReadWrite.write DivisibleBy2
+        |> ReadWrite.map ((*) int)
 
 add : DivisibleBy2 -> DivisibleBy2 -> DivisibleBy2
 add toAdd =
-    Val.write DivisibleBy2
-        >> Val.map2 (+) toAdd
+    ReadWrite.write DivisibleBy2
+        >> ReadWrite.map2 (+) toAdd
 
 zero : DivisibleBy2
 zero =
-    Val.readOnly DivisibleBy2 (Val.tag 0)
+    ReadWrite.readOnly DivisibleBy2
+        (ReadWrite.tag 0)
 
 two : DivisibleBy2
 two =
-    Val.readOnly DivisibleBy2 (Val.tag 2)
+    ReadWrite.readOnly DivisibleBy2
+        (ReadWrite.tag 2)
 ```
 
 Then outside this module
@@ -88,7 +85,7 @@ Then outside this module
 ```elm
 iWantANumberDivisibleBy2 : DivisibleBy2 -> Cake
 
-iWantANumberDivisibleBy2 (Val.tag 3)
+iWantANumberDivisibleBy2 (ReadWrite.tag 3)
 --> compile-time error
 
 iWantANumberDivisibleBy2
@@ -99,43 +96,37 @@ iWantANumberDivisibleBy2
 ```
 Another example:
 
-A module that generates random unique `Id`s:
+A module that only exposes randomly generated unique `Id`s:
 ```elm
 module Id exposing (Id, random)
 
 import Random
-import Val exposing (Val, ReadOnly)
 
 type IdTag =
     Id
 
 type alias Id =
-    Val IdTag String ReadOnly
+    ReadOnly IdTag String
 
 random : Random.Generator Id
 random =
-    Random.map (Val.new >> Val.readOnly Id)
+    Random.map
+        (ReadWrite.tag >> ReadWrite.readOnly Id)
         ({-...-})
 ```
 No `Id` can be created outside this package!
 
-### WriteOnly
+### `WriteOnly`
 
 You should only need this rarely.
 
 ```elm
-module Password exposing (Password)
-
 type alias Password =
-    Val PasswordTag String WriteOnly
+    WriteOnly PasswordTag String
 
 type PasswordTag =
     Password Never
-```
 
-anywhere:
-
-```elm
 type alias User =
     { name : String
     , password : Password
@@ -148,21 +139,21 @@ update msg model =
               | user =
                   { name = model.user.name
                   , password =
-                      Val.new password --valid
+                      ReadWrite.tag password --valid
                   }
             }
 
 -- hahahah muhuhuhuhaahahahah
-leak (Val.untag model.user.password)
+leak (Read.value model.user.password)
 ```
-You can't get the value inside `password`. This is a compile-time error.
+**No**, you can't get the value inside `password`. This is a compile-time error.
 
 However, there's one thing you can still do
 ```elm
 commonPasswords =
     Set.fromList
         [ "password", "secret", "p4ssw0rd", "1234" ]
-        |> Set.map Val.tag
+        |> Set.map ReadWrite.tag
 
 if Set.member model.user.password commonPasswords then
     "Choose a less common password. Use at lest 10 letters & symbols."
@@ -170,11 +161,12 @@ else
     "👍"
 ```
 
-If you for example wanted to find out if the length is above 10, just use `ReadOnly`.
+But if you wanted to find out if the length is >= 10 for example, just use `ReadOnly`.
 
 ## Prior art
 This package wouldn't exist without them.
 - [Punie/elm-id](https://package.elm-lang.org/packages/Punie/elm-id/latest/)
+
 especially
 - [joneshf/elm-tagged](https://package.elm-lang.org/packages/joneshf/elm-tagged/latest/)
 - [IzumiSy/elm-typed](https://package.elm-lang.org/packages/IzumiSy/elm-typed/latest/)
