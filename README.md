@@ -65,12 +65,12 @@ type DivisibleBy2Tag =
 
 multiply : Int -> DivisibleBy2 -> DivisibleBy2
 multiply int =
-    ReadWrite.write DivisibleBy2
+    Read.write DivisibleBy2
         |> ReadWrite.map ((*) int)
 
 add : DivisibleBy2 -> DivisibleBy2 -> DivisibleBy2
 add toAdd =
-    ReadWrite.write DivisibleBy2
+    Read.write DivisibleBy2
         >> ReadWrite.map2 (+) toAdd
 
 zero : DivisibleBy2
