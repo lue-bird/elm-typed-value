@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "lue-bird/elm-typed-value",
-    "summary": "create type-safe aliases for primitive types",
+    "summary": "no more 1-constructor types",
     "license": "MIT",
     "version": "1.0.0",
     "exposed-modules": [
