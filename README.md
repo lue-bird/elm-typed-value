@@ -136,12 +136,12 @@ two =
 Then outside this module
 
 ```elm
-iWantANumberEven : Even -> Cake
+cakeForEvenNumbers : Even -> Cake
 
-iWantANumberEven (tag 3)
+cakeForEvenNumbers (tag 3)
 --> compile-time error: isn't of type Checked
 
-iWantANumberEven
+cakeForEvenNumbers
     (Even.two |> Even.multiply -5)
 --> Cake
 ```
