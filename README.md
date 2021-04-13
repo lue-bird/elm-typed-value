@@ -166,7 +166,7 @@ toString --...
 ```
 No `Id` can be created outside this package!
 
-### Combined with `TaggedHidden`
+## Combined with `TaggedHidden`
 
 ```elm
 module Password exposing (Password, GoodPassword, isGood)
