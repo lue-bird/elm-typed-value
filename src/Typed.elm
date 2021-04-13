@@ -3,8 +3,8 @@ module Typed exposing
     , tag
     , Tagged
     , Checked, isChecked
-    , TaggedHidden, CheckedHidden, hideValue
     , value, values2, hiddenValueIn
+    , TaggedHidden, CheckedHidden
     , map, map2
     )
 
@@ -31,14 +31,14 @@ module Typed exposing
 @docs Checked, isChecked
 
 
-## hidden
-
-@docs TaggedHidden, CheckedHidden, hideValue
-
-
 ## access
 
 @docs value, values2, hiddenValueIn
+
+
+## hidden
+
+@docs TaggedHidden, CheckedHidden
 
 
 ## modify
@@ -67,11 +67,11 @@ You will see `Typed` as a function argument type.
 
     map :
         (value -> mappedValue)
-        -> Typed tag value { whoCanAccess | canCreate : whoCanCreate }
-        -> Typed mappedTag mappedValue { whoCanAccess | canCreate : Anyone }
+        -> Typed tag value { whoCanAccess | createdBy : whoCreated }
+        -> Typed mappedTag mappedValue { whoCanAccess | createdBy : Anyone }
 
 Is saying: `map` works on every `Typed`.
-The result is updatable & and has the same permission on `whoCanCreate`.
+The result has the same one `whoCreated` it.
 
 Meaning if the input was
 
@@ -79,23 +79,23 @@ Meaning if the input was
   - `CheckedHidden` or `TaggedHidden`, the result becomes a `TaggedHidden`
 
 -}
-type Typed tag value accessibilityAndCreatability
+type Typed tag value whoCreatedAndWhoCanAccess
     = Typed value
 
 
 {-| Create a new tagged value.
 
-  - can be `Checked` with [`is`](Typed#is)
-  - can be `TaggedHidden` with [`hideValue`](Typed#hideValue)
+  - can be `Checked` with [`isChecked`](Typed#isChecked)
   - if you start modifying that value, it becomes a `Tagged`
+  - becomes a `TaggedHidden` when annotated / used as an argument
 
 -}
-tag : value -> Typed tag value { accessiblility | canCreate : Anyone }
+tag : value -> Typed tag value { whoCanAccess | createdBy : Anyone }
 tag value_ =
     Typed value_
 
 
-{-| Anyone.
+{-| Anyone who wanted.
 -}
 type Anyone
     = Anyone Never
@@ -107,17 +107,17 @@ type NoUser
     = NoUser Never
 
 
-{-| Every possible `value` can be a `tag`.
+{-| Every possible `value` can be described with this `tag`.
 
-  - Tagged MetersTag Float
+  - `Tagged MetersTag Float`
       - **✓** Every Float can describe `Meters`
-  - Tagged NaturalNumberTag Int
-      - **⨯** Not every `Int` can be a `Nat`
-      - Use `Checked` instead!
+  - `Tagged NaturalNumberTag Int`
+      - **⨯ Not** every `Int` can be called a `NaturalNumber`
+      - Use [`Checked`](Typed#Checked) instead!
 
-You can ccess its `value`.
+Anyone can access its `value`.
 
-An instance can be created & updated everywhere.
+Instances can be created & updated everywhere.
 
 -}
 type alias Tagged tag value =
@@ -125,17 +125,17 @@ type alias Tagged tag value =
         tag
         value
         { canAccess : Anyone
-        , canCreate : Anyone
+        , createdBy : Anyone
         }
 
 
 
--- ## read
+-- ## access
 
 
-{-| Instances that can only be validated in the module where the `tag` is.
+{-| Instances that are validated from inside the module where the `tag` is.
 
-You can read the valid `value`, but once you modify it, it just becomes a `Tagged`.
+Anyone can read the valid `value`, but once you modify it, it just becomes a `Tagged`.
 
 -}
 type alias Checked tag value =
@@ -143,14 +143,14 @@ type alias Checked tag value =
         tag
         value
         { canAccess : Anyone
-        , canCreate : NoUser
+        , createdBy : NoUser
         }
 
 
-{-| Read the value inside the `Accessible`.
+{-| Read the value inside a `Tagged` or `Checked`.
 -}
 value :
-    Typed tag value { whoCanCreate | canAccess : Anyone }
+    Typed tag value { whoCreated | canAccess : Anyone }
     -> value
 value =
     \(Typed value_) -> value_
@@ -163,10 +163,10 @@ value =
 
     prime3 : PrimeNumber
     prime3 =
-        tag PrimeNumber 3
+        tag 3 |> isChecked PrimeNumber
 
     prime5 =
-        tag PrimeNumber 5
+        tag 5 |> isChecked PrimeNumber
 
 Anywhere
 
@@ -179,45 +179,33 @@ Anywhere
 -}
 values2 :
     (aValue -> bValue -> resultValue)
-    -> Typed aTag aValue { aCreatability | canAccess : Anyone }
-    -> Typed bTag bValue { bCreatability | canAccess : Anyone }
+    -> Typed aTag aValue { whoCreateda | canAccess : Anyone }
+    -> Typed bTag bValue { whoCreatedb | canAccess : Anyone }
     -> resultValue
 values2 binOp aTyped bTyped =
     binOp (value aTyped) (value bTyped)
 
 
-{-| After called `tag` or modified a checked value, you get a `Tagged`. To transform it back, use `isChecked tag`.
+{-| After calling `tag` or modifying a checked value, you get a `Tagged`. To tell the type that the result value is `Checked`, use `isChecked tag`.
 
-The `tag` verifies that you are allowed to say a `value` is `Checked`s with that `tag`.
+The type of `tag` might even change in that operation.
 
-The type of tag might even change in that operation.
-
-    type alias Length unit =
-        Tagged unit Float
-
-    type Meters
-        = Meters
-
-    type Millimeters
-        = Millimeters
-
-    -- use a type annotation: this should only convert meters
-    metersToMillimeters : Length Meters -> Length Millimeters
-    metersToMillimeters =
-        Typed.map ((*) 1000)
-            >> isChecked Millimeters
+    oddPlusOdd : Odd -> Odd -> Even
+    oddPlusOdd oddToAdd =
+        Typed.map2 (+) oddToAdd
+            >> isChecked Even
 
 -}
 isChecked :
     checkedTag
-    -> Typed tag value { whoCanAccess | canCreate : create }
-    -> Typed checkedTag value { whoCanAccess | canCreate : Anyone }
+    -> Typed tag value { whoCanAccess | createdBy : create }
+    -> Typed checkedTag value { whoCanAccess | createdBy : Anyone }
 isChecked _ =
     \(Typed value_) -> Typed value_
 
 
 
--- ## creatable by user
+-- ## no need to check
 
 
 {-| Using its value isn't allowed.
@@ -245,7 +233,7 @@ type alias TaggedHidden tag value =
     Typed
         tag
         value
-        { canCreate : Anyone
+        { createdBy : Anyone
         , canAccess : NoUser
         }
 
@@ -267,8 +255,8 @@ If the `Typed` was a `Checked`, it becomes a `Typed`.
 -}
 map :
     (value -> mappedValue)
-    -> Typed tag value { whoCanAccess | canCreate : whoCanCreate }
-    -> Typed mappedTag mappedValue { whoCanAccess | canCreate : Anyone }
+    -> Typed tag value { whoCanAccess | createdBy : whoCreated }
+    -> Typed mappedTag mappedValue { whoCanAccess | createdBy : Anyone }
 map alter =
     \(Typed value_) -> alter value_ |> Typed
 
@@ -304,9 +292,9 @@ In another module
 -}
 map2 :
     (aValue -> bValue -> combinedValue)
-    -> Typed aTag aValue { whoCanAccess | canCreate : aWhoCanCreate }
-    -> Typed bTag bValue { whoCanAccess | canCreate : bWhoCanCreate }
-    -> Typed combinedTag combinedValue { whoCanAccess | canCreate : Anyone }
+    -> Typed aTag aValue { whoCanAccess | createdBy : aWhoCanCreate }
+    -> Typed bTag bValue { whoCanAccess | createdBy : bWhoCanCreate }
+    -> Typed combinedTag combinedValue { whoCanAccess | createdBy : Anyone }
 map2 binOp aTyped bTyped =
     let
         (Typed aValue) =
@@ -332,22 +320,9 @@ type alias CheckedHidden tag value =
     Typed
         tag
         value
-        { canCreate : NoUser
+        { createdBy : NoUser
         , canAccess : NoUser
         }
-
-
-{-| Stop users to access to the `value`.
-
-  - A `Checked` becomes a `CheckedHidden`
-  - A `Tagged` becomes a `TaggedHidden`
-
--}
-hideValue :
-    Typed tag value { whoCanCreate | canAccess : whoCanAccess }
-    -> Typed tag value { whoCanCreate | canAccess : NoUser }
-hideValue =
-    \(Typed value_) -> Typed value_
 
 
 {-| If you have a `CheckedHidden`, its value isn't readable by users.
@@ -357,7 +332,7 @@ If you have the `tag` however, you can access this data hidden from the user.
 -}
 hiddenValueIn :
     tag
-    -> Typed tag value { whoCanCreate | canAccess : NoUser }
+    -> Typed tag value { whoCreated | canAccess : NoUser }
     -> value
 hiddenValueIn _ =
     \(Typed value_) -> value_
