@@ -1,7 +1,6 @@
 module Typed exposing
     ( Typed, NoUser, Anyone
-    , tag
-    , Tagged
+    , tag, Tagged
     , Checked, isChecked
     , value, values2, hiddenValueIn
     , TaggedHidden, CheckedHidden
@@ -16,14 +15,9 @@ module Typed exposing
 @docs Typed, NoUser, Anyone
 
 
-## create
+## created by anyone
 
-@docs tag
-
-
-## no need to check
-
-@docs Tagged
+@docs tag, Tagged
 
 
 ## checked
