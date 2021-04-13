@@ -150,7 +150,8 @@ type alias Id =
     CheckedHidden IdTag CurrentImplementation
 
 -- left as an implementation detail
--- might change in the future, but the API should stay the same
+-- might change in the future
+-- but the API should stay the same
 type alias CurrentImplementation =
     String
 
@@ -158,8 +159,8 @@ type IdTag = Id
 
 random : Random.Generator Id
 random =
-    Random.map (isChecked Id)
-        ({-...-})
+    Random.list 16 ({-...-})
+        |> Random.map (isChecked Id)
 
 toBytes --...
 toString --...
@@ -189,9 +190,9 @@ isGood passwordToTest =
             hiddenValueIn Password passwordToTest
     in
     if (passwordString |> String.length) < 10 then
-        "Use at lest 10 letters & symbols."
+        Err "Use at lest 10 letters & symbols."
     else if Set.member passwordString commonPasswords then
-        "Choose a less common password."
+        Err "Choose a less common password."
     else
         Ok (passwordToTest |> isChecked GoodPassword)
 
@@ -240,7 +241,11 @@ update msg model =
             }
 
 view model =
-    button [ onPress (tag >> ChangePassword) ]
+    button
+        [ onPress
+            -- not accessible from now on
+            (tag >> ChangePassword)
+        ]
         [ text "Change Password" ]
 ```
 → There can't be a `User` with a bad password.
@@ -250,6 +255,23 @@ leak (Typed.value newPassword)
 leak (Typed.value model.user.password)
 ```
 → compile-time error: Can't get the `value` inside `password`.
+
+## When not to use `Checked`
+
+There might be a type that can guarantee these promises whether it is created by you or not.
+
+Example `GoodPassword`:
+
+```elm
+type alias GoodPassword howMuchLongerThan10 maxLength lengthMaybeN =
+    Arr
+        (In (Nat10Plus howMuchLongerThan10)
+            maxLength
+            lengthMaybeN
+        )
+        Char
+```
+Used here: [`elm-bounded-array`](https://package.elm-lang.org/packages/lue-bird/elm-bounded-array/latest/).
 
 ## Prior art
 This package wouldn't exist without a lot of inspiration from those packages.
