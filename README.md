@@ -59,10 +59,12 @@ If you don't want users to access the `value` directly, use `CheckedHidden` / `T
 # examples
 
 ```elm
-import Typed exposing
-    ( Tagged, Checked, CheckedHidden, TaggedHidden
-    , tag, hideValue, hiddenValueIn, isChecked
-    )
+import Typed
+    exposing
+        ( Typed, NoUser, Anyone
+        , Tagged, Checked, CheckedHidden, TaggedHidden
+        , tag, hiddenValueIn, isChecked
+        )
 ```
 
 ## `Tagged`
@@ -87,6 +89,15 @@ heightEiffelTower : Length Meters
 heightEiffelTower =
     tag 300
 ```
+
+```elm
+heightEiffelTower |> metersToMillimeters
+    |> metersToMillimeters
+```
+→ compile-time exception
+> Expected: `Length Millimeters -> Length Millimeters`
+
+> Found: `Length Meters -> Length Millimeters`
 
 ## `Checked`
 
@@ -137,7 +148,7 @@ iWantANumberEven
 
 ## `CheckedHidden`
 
-A validated value that can't be accessed by a user.
+A validated value that can't be directly accessed by a user.
 
 A module that only exposes randomly generated unique `Id`s:
 
@@ -170,20 +181,26 @@ No `Id` can be created outside this package!
 ## Combined with `TaggedHidden`
 
 ```elm
-module Password exposing (Password, GoodPassword, isGood)
+module Password exposing (UncheckedPassword, GoodPassword, isGood, toOnlyDots)
 
-type alias Password =
-    TaggedHidden PasswordTag String
+type alias Password goodOrUnchecked =
+    Typed PasswordTag String { goodOrUnchecked | canAccess : NoUser }
+
+-- don't expose the tag
+type PasswordTag
+    = Password
 
 type alias GoodPassword =
-    CheckedHidden GoodPasswordTag String
+    Password { createdBy : NoUser }
+    -- which makes it a CheckedHidden
 
--- don't expose any tag
-type PasswordTag = Password Never
-type GoodPasswordTag = GoodPassword
+type alias UncheckedPassword =
+    Password { createdBy : Anyone }
+    -- which makes it a TaggedHidden
+
 
 isGood :
-    Password -> Result String GoodPassword
+    UncheckedPassword -> Result String GoodPassword
 isGood passwordToTest =
     let
         passwordString =
@@ -194,7 +211,7 @@ isGood passwordToTest =
     else if Set.member passwordString commonPasswords then
         Err "Choose a less common password."
     else
-        Ok (passwordToTest |> isChecked GoodPassword)
+        Ok (passwordToTest |> isChecked Password)
 
 commonPasswords =
     Set.fromList
@@ -205,60 +222,80 @@ commonPasswords =
 ```
 You can then decide that only a part of the information should be accessible.
 ```elm
-{-| Doesn't expose too much information.
--}
-toOnlyDots : Password -> List Char
+-- doesn't expose too much information.
+toOnlyDots : Password goodOrUnchecked -> String
 toOnlyDots =
     hiddenValueIn Password
         >> String.length
-        >> (\dots-> List.repeat dots '·')
+        >> (\length ->
+                List.repeat length '·'
+                    |> String.fromList
+           )
 ```
 In another module
 ```elm
 type alias User =
     { name : String
     , password : GoodPassword
-        --there can't be a user with a insecure password
+        
+type alias Model =
+    { passwordTypedIntoRegister : UncheckedPassword
+        --cannot access the password the user typed
+    , loggedIn : LoggedIn
     }
 
+type LoggedIn
+    = LoggedIn { userPassword : GoodPassword }
+        --there can't be a user with an insecure password
+    | NotLoggedIn
+
+
 type Msg
-    --cannot access the password the user changed to
-    = ChangePassword Password
+    = PasswordTypedIntoRegisterChanged UncheckedPassword
+    | Register GoodPassword
 
 update msg model =
     case msg of
-        ChangePassword newPassword ->
+        PasswordTypedIntoRegisterChanged uncheckedPassword ->
             { model
-              | user =
-                  { name = model.user.name
-                  , password =
-                      case Password.isGood newPassword of
-                          Ok goodPasword ->
-                              -- valid
-                          Err message ->
-                              -- tell the user
-                  }
+              | passwordTypedIntoRegister = uncheckedPassword
+            }
+        
+        Register goodPassword ->
+            { model
+                | passwordTypedIntoRegister = tag ""
+                , loggedIn =
+                    LoggedIn { userPassword = goodPassword }
             }
 
-view model =
-    button
-        [ onPress
-            -- not accessible from now on
-            (tag >> ChangePassword)
+view { passwordTypedIntoRegister } =
+    Html.div []
+        [ Html.div [] [ text "register" ]
+        , Html.input
+            [ onInput (tag >> PasswordTypedIntoRegisterChanged)
+                --not accessible from now on
+            , value (Password.toOnlyDots passwordTypedIntoRegister)
+            ]
+            []
+        , case Password.isGood passwordTypedIntoRegister of
+            Ok goodPassword ->
+                Html.button
+                    [ onClick (Register goodPassword) ]
+                    [ text "Create account" ]
+            Err message ->
+                text message
         ]
-        [ text "Change Password" ]
 ```
-→ There can't be a `User` with a bad password.
 ```elm
-leak (Typed.value newPassword)
+leak (Typed.value passwordTypedIntoRegister)
 -- or
-leak (Typed.value model.user.password)
+leak (Typed.value userPassword)
 ```
-→ compile-time error: Can't get the `value` inside `password`.
+→ compile-time error: Can't access the `value` inside a `Hidden...`.
 
-## When not to use `Checked`
+## When not to use `Checked`/`CheckedHidden`
 
-There might be a type that can guarantee these promises whether it is created by you or not.
+There might be a type that can guarantee these promises even if created by users.
 
 Example `GoodPassword`:
 
