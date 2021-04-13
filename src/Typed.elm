@@ -1,6 +1,6 @@
 module Typed exposing
     ( Typed, NoUser, Anyone
-    , tag, Tagged
+    , tag, Tagged, serialize
     , Checked, isChecked
     , value, values2, hiddenValueIn
     , TaggedHidden, CheckedHidden
@@ -17,7 +17,7 @@ module Typed exposing
 
 ## created by anyone
 
-@docs tag, Tagged
+@docs tag, Tagged, serialize
 
 
 ## checked
@@ -40,6 +40,8 @@ module Typed exposing
 @docs map, map2
 
 -}
+
+import Serialize
 
 
 {-| A value is wrapped in a `type` with a phantom `tag`,
@@ -330,3 +332,11 @@ hiddenValueIn :
     -> value
 hiddenValueIn _ =
     \(Typed value_) -> value_
+
+
+serialize :
+    Serialize.Codec error value
+    -> Serialize.Codec error (Tagged tag value)
+serialize serializeValue =
+    serializeValue
+        |> Serialize.map tag value
