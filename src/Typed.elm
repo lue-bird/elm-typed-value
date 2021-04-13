@@ -192,8 +192,8 @@ The type of `tag` might even change in that operation.
 -}
 isChecked :
     checkedTag
-    -> Typed tag value { whoCanAccess | createdBy : create }
-    -> Typed checkedTag value { whoCanAccess | createdBy : Anyone }
+    -> Typed tag value { whoCanAccess | createdBy : whoCreated }
+    -> Typed checkedTag value { whoCanAccess | createdBy : NoUser }
 isChecked _ =
     \(Typed value_) -> Typed value_
 
