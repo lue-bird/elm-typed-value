@@ -35,8 +35,8 @@ There are 2 kinds of `Typed`:
     ```elm
     module NaturalNumber exposing (NaturalNumber)
 
-    -- nobody can create a NaturalNumber outside this module
     type NaturalNumber =
+        -- nobody outside this module can call this constructor
         NaturalNumber Int
     ```
 
