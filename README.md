@@ -185,22 +185,22 @@ isGood :
     Password -> Result String GoodPassword
 isGood passwordToTest =
     let
-        commonPasswords =
-            Set.fromList
-                [ "password1234", "secret1234"
-                , "c001_p4ssw0rd", "1234567890"
-                --...
-                ]
-        
         passwordString =
             hiddenValueIn Password passwordToTest
     in
-    if (passwordToTest |> String.length) < 10 then
+    if (passwordString |> String.length) < 10 then
         "Use at lest 10 letters & symbols."
-    else if Set.member passwordToTest commonPasswords then
+    else if Set.member passwordString commonPasswords then
         "Choose a less common password."
     else
         Ok (passwordToTest |> isChecked GoodPassword)
+
+commonPasswords =
+    Set.fromList
+        [ "password1234", "secret1234"
+        , "c001_p4ssw0rd", "1234567890"
+        --...
+        ]
 ```
 You can then decide that only a part of the information should be accessible.
 ```elm
