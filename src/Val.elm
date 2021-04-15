@@ -1,4 +1,4 @@
-module Typed exposing
+module Val exposing
     ( Val
     , Tagged, tag, map, map2
     , Checked, isChecked
