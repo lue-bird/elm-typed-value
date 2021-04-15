@@ -1,11 +1,11 @@
 {
     "type": "package",
     "name": "lue-bird/elm-typed-value",
-    "summary": "no more 1-constructor types",
+    "summary": "better 1-constructor types",
     "license": "MIT",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "exposed-modules": [
-        "Typed"
+        "Val"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {
