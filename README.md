@@ -84,7 +84,7 @@ import val
 
 ```elm
 type alias Pixels =
-    Val Tagged PixelsTag Public Float
+    Val Tagged PixelsTag Public Int
 
 type PixelsTag
     = Pixels Never
