@@ -1,33 +1,27 @@
 module Id exposing (Id, random, toString)
 
 import Random
-import Typed
-    exposing
-        ( Checked
-        , CheckedHidden
-        , Tagged
-        , TaggedHidden
-        , hiddenValueIn
-        , isChecked
-        , tag
-        )
+import Val exposing (Checked, Internal, Val, isChecked, tag)
+
 
 type alias Id =
-    CheckedHidden IdTag CurrentImplementation
+    Val Checked IdTag Internal String
 
--- left as an implementation detail
--- might change in the future
--- but the API should stay the same
-type alias CurrentImplementation =
-    String
 
-type IdTag = Id
+type IdTag
+    = Id
+
 
 random : Random.Generator Id
 random =
-    Random.list 16 ({-...-})
-        |> Random.map (isChecked Id)
+    Random.list 16
+        (Random.int (Char.toCode 'A') (Char.toCode 'z')
+            |> Random.map Char.fromCode
+        )
+        |> Random.map String.fromList
+        |> Random.map (tag >> isChecked Id)
+
 
 toString : Id -> String
 toString =
-    hiddenValueIn Id
+    Val.internal Id

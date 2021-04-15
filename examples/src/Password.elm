@@ -1,23 +1,11 @@
 module Password exposing (GoodPassword, UncheckedPassword, isGood, toOnlyDots)
 
-import Set
-import Typed
-    exposing
-        ( Anyone
-        , Checked
-        , CheckedHidden
-        , NoUser
-        , Tagged
-        , TaggedHidden
-        , Typed
-        , hiddenValueIn
-        , isChecked
-        , tag
-        )
+import Set exposing (Set)
+import Val exposing (Checked, Internal, Tagged, Val, isChecked, tag)
 
 
 type alias Password goodOrUnchecked =
-    Typed PasswordTag String { goodOrUnchecked | canAccess : NoUser }
+    Val goodOrUnchecked PasswordTag Internal String
 
 
 type PasswordTag
@@ -25,18 +13,18 @@ type PasswordTag
 
 
 type alias GoodPassword =
-    Password { createdBy : NoUser }
+    Password Checked
 
 
 type alias UncheckedPassword =
-    Password { createdBy : Anyone }
+    Password Tagged
 
 
 isGood : UncheckedPassword -> Result String GoodPassword
 isGood passwordToTest =
     let
         passwordString =
-            hiddenValueIn Password passwordToTest
+            Val.internal Password passwordToTest
     in
     if (passwordString |> String.length) < 10 then
         Err "Use at lest 10 letters & symbols."
@@ -48,6 +36,7 @@ isGood passwordToTest =
         Ok (passwordToTest |> isChecked Password)
 
 
+commonPasswords : Set String
 commonPasswords =
     Set.fromList
         [ "password1234"
@@ -61,7 +50,7 @@ commonPasswords =
 
 toOnlyDots : Password goodOrUnchecked -> String
 toOnlyDots =
-    hiddenValueIn Password
+    Val.internal Password
         >> String.length
         >> (\length ->
                 List.repeat length '·'

@@ -1,23 +1,11 @@
-module User exposing (main)
+module Register exposing (main)
 
 import Browser
-import Password exposing (GoodPassword, UncheckedPassword)
-import Html exposing (button, text)
+import Html exposing (text)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
-import Typed
-    exposing
-        ( Anyone
-        , Checked
-        , CheckedHidden
-        , NoUser
-        , Tagged
-        , TaggedHidden
-        , Typed
-        , hiddenValueIn
-        , isChecked
-        , tag
-        )
+import Password exposing (GoodPassword, UncheckedPassword)
+import Val exposing (tag)
 
 
 main : Program () Model Msg
@@ -28,31 +16,36 @@ main =
         , update = update
         }
 
+
 type alias Model =
     { passwordTypedIntoRegister : UncheckedPassword
     , loggedIn : LoggedIn
     }
 
+
 type LoggedIn
     = LoggedIn { userPassword : GoodPassword }
     | NotLoggedIn
+
 
 initModel =
     { passwordTypedIntoRegister = tag ""
     , loggedIn = NotLoggedIn
     }
 
+
 type Msg
     = PasswordTypedIntoRegisterChanged UncheckedPassword
     | Register GoodPassword
+
 
 update msg model =
     case msg of
         PasswordTypedIntoRegisterChanged uncheckedPassword ->
             { model
-              | passwordTypedIntoRegister = uncheckedPassword
+                | passwordTypedIntoRegister = uncheckedPassword
             }
-        
+
         Register goodPassword ->
             { model
                 | passwordTypedIntoRegister = tag ""
@@ -75,6 +68,7 @@ view { passwordTypedIntoRegister } =
                     [ onClick (Register goodPassword)
                     ]
                     [ text "Create account" ]
+
             Err message ->
                 text message
         ]
