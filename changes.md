@@ -12,5 +12,5 @@ Changed `Typed tag value { createdBy : whoCreated, canAccess : whoCanAccess }` t
 - renamed `value` to `val`
 - renamed `values2` to `val2`
 - renamed `hiddenValueIn` to `Val.internal`
-- `map` doesn't return a `Tagged` with the same `tag`
+- `map` now returns a `Tagged` with the same `tag`
 - add `serialize` & `serializeChecked`
