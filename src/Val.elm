@@ -360,7 +360,10 @@ Choose a value it can convert from & to and serialize that.
             |> Serialize.list
             |> Val.serializeChecked EfficientList
                 (\list ->
-                    Ok { list = list, length = List.length length }
+                    { list = list
+                    , length = List.length length
+                    }
+                        |> Ok
                 )
 
 -}
