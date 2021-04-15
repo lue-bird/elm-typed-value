@@ -1,185 +1,223 @@
 module Typed exposing
-    ( Typed, NoUser, Anyone
-    , tag, Tagged, serialize
+    ( Val
+    , Tagged, tag, map, map2
     , Checked, isChecked
-    , value, values2, hiddenValueIn
-    , TaggedHidden, CheckedHidden
-    , map, map2
+    , Public, val, val2
+    , Internal, internal
+    , serialize, serializeChecked
     )
 
 {-|
 
-
-## building blocks
-
-@docs Typed, NoUser, Anyone
+@docs Val
 
 
-## created by anyone
-
-@docs tag, Tagged, serialize
+## who can create
 
 
-## checked
+### tagged
+
+@docs Tagged, tag, map, map2
+
+
+### checked
 
 @docs Checked, isChecked
 
 
-## access
-
-@docs value, values2, hiddenValueIn
+## who can access
 
 
-## hidden
+### Public
 
-@docs TaggedHidden, CheckedHidden
+@docs Public, val, val2
 
 
-## modify
+### internal
 
-@docs map, map2
+@docs Internal, internal
+
+
+## serialize
+
+@docs serialize, serializeChecked
 
 -}
 
 import Serialize
 
 
-{-| A value is wrapped in a `type` with a phantom `tag`,
-so that a `Typed A Int ...` is not a `Typed B Int ...`.
+{-| A value is wrapped in the `type Val` with a phantom `tag`.
 
-The wrappers of type `Typed`
+A `Val ... Meters ... Float` can't be called a `Val ... Kilos ... Float` anymore!
 
-  - [`Checked`](Typed#Checked)
+For `type`s with just 1 constructor with a value a `Val` can be a good replacement.
 
-  - [`Tagged`](Typed#Tagged)
 
-  - [`TaggedHidden`](Typed#TaggedHidden)
+### who can construct such a value
 
-  - [`CheckedHidden`](Typed#TaggedHidden)
+  - [`Checked`](Val#Checked)
+
+  - [`Tagged`](Val#Tagged)
+
+
+### who can access the value
+
+  - [`Public`](Val#Public)
+
+  - [`Internal`](Val#Internal)
 
 all promise additional type-safety.
 
-You will see `Typed` as a function argument type.
+
+### reading types
 
     map :
         (value -> mappedValue)
-        -> Typed tag value { whoCanAccess | createdBy : whoCreated }
-        -> Typed mappedTag mappedValue { whoCanAccess | createdBy : Anyone }
+        -> Val whoCanCreate tag whoCanAccess value
+        -> Val Tagged tag whoCanAccess
 
-Is saying: `map` works on every `Typed`.
-The result has the same one `whoCreated` it.
+Is saying: `map` works on every `Val` and returns a value that is just `Tagged`, but not `Checked`.
+Explaining `whoCanAccess`:
 
-Meaning if the input was
+  - If the input is `Public`
+  - If the input is `Internal`,
 
-  - `Checked` or `Tagged`, the result becomes a `Tagged`
-  - `CheckedHidden` or `TaggedHidden`, the result becomes a `TaggedHidden`
+the result will be too.
 
 -}
-type Typed tag value whoCreatedAndWhoCanAccess
-    = Typed value
+type Val whoCreated tag whoCanAccess value
+    = Val value
+
+
+{-| Only the ones with access to the `tag` constructor can access the `Val.internal`.
+
+Meaning that access can be limited to
+
+  - inside a module
+
+```
+module Special exposing (Special)
+
+type alias Special =
+    Val Tagged SpecialTag Internal SpecialValue
+```
+
+  - inside a package (only with `Checked`)
+
+```
+src
+  └ Special
+      └ Internal.elm
+          module Special.Internal exposing (SpecialTag(..))
+  └ SpecialPartA.elm
+      module SpecialPartA exposing (SpecialPartA)
+      import Special.Internal exposing (SpecialTag(..))
+  └ SpecialPartB.elm
+      module SpecialPartB exposing (SpecialPartB)
+      import Special.Internal exposing (SpecialTag(..))
+elm.json 'exposed-modules' :
+  [ "SpecialPartA", "SpecialPartB" ]
+```
+
+This generally helps hiding implementation details.
+
+    type alias OptimizedList a =
+        Val Checked OptimizedListTag Internal (Implementation a)
+
+    type alias Implementation a =
+        { list : List a, length : Int }
+
+    toList --...
+
+-}
+type Internal
+    = Internal Never
+
+
+{-| Anyone is able to access the value.
+-}
+type Public
+    = Public Never
+
+
+{-| Anyone is able to create one of those.
+
+Example `Val Tagged MetersTag ... Float`
+
+→ The right choice, as every `Float` is a valid description of `Meters`
+
+-}
+type Tagged
+    = Tagged Never
+
+
+{-| Only someone with access to the `tag` constructor is able to create one of those.
+
+In effect, this means that you can only let "validated" data be of this type.
+
+Examaple `... Checked ... NaturalNumberTag Int`
+
+→ **✓** not every `Int` can be called a `NaturalNumber`, it must be checked!
+
+-}
+type Checked
+    = Checked Never
 
 
 {-| Create a new tagged value.
 
-  - can be `Checked` with [`isChecked`](Typed#isChecked)
-  - if you start modifying that value, it becomes a `Tagged`
-  - becomes a `TaggedHidden` when annotated / used as an argument
+  - can be `Checked` with [`isChecked`](Val#isChecked)
+  - becomes `Internal/Public` when annotated that way
+
+Modifying won't change the type.
 
 -}
-tag : value -> Typed tag value { whoCanAccess | createdBy : Anyone }
+tag : value -> Val Tagged tag whoCanAccess value
 tag value_ =
-    Typed value_
-
-
-{-| Anyone who wanted.
--}
-type Anyone
-    = Anyone Never
-
-
-{-| Only the ones with access to the `tag` constructor.
--}
-type NoUser
-    = NoUser Never
-
-
-{-| Every possible `value` can be described with this `tag`.
-
-  - `Tagged MetersTag Float`
-      - **✓** Every Float can describe `Meters`
-  - `Tagged NaturalNumberTag Int`
-      - **⨯ Not** every `Int` can be called a `NaturalNumber`
-      - Use [`Checked`](Typed#Checked) instead!
-
-Anyone can access its `value`.
-
-Instances can be created & updated everywhere.
-
--}
-type alias Tagged tag value =
-    Typed
-        tag
-        value
-        { canAccess : Anyone
-        , createdBy : Anyone
-        }
+    Val value_
 
 
 
 -- ## access
 
 
-{-| Instances that are validated from inside the module where the `tag` is.
-
-Anyone can read the valid `value`, but once you modify it, it just becomes a `Tagged`.
-
+{-| Read the value inside a `Public` `Val`.
 -}
-type alias Checked tag value =
-    Typed
-        tag
-        value
-        { canAccess : Anyone
-        , createdBy : NoUser
-        }
-
-
-{-| Read the value inside a `Tagged` or `Checked`.
--}
-value :
-    Typed tag value { whoCreated | canAccess : Anyone }
-    -> value
-value =
-    \(Typed value_) -> value_
+val : Val whoCreated tag Public value -> value
+val =
+    \(Val value_) -> value_
 
 
 {-| Use the values of 2 `Accessible`s to return a result.
 
-    type alias PrimeNumber =
-        Checked PrimeNumberTag Int
+    type alias Prime =
+        Val Checked PrimeTag Public Int
 
-    prime3 : PrimeNumber
     prime3 =
-        tag 3 |> isChecked PrimeNumber
+        tag 3 |> isChecked Prime
 
     prime5 =
-        tag 5 |> isChecked PrimeNumber
+        tag 5 |> isChecked Prime
 
 Anywhere
 
-    Typed.values2 (+) prime3 prime5
+    val2 (+) prime3 prime5
     --> 8
 
-    Typed.values2 Tuple.pair prime3 prime5
+    val2 Tuple.pair prime3 prime5
     --> ( 3, 5 )
 
+    if val2 (<) onePrime otherPrime then
+
 -}
-values2 :
+val2 :
     (aValue -> bValue -> resultValue)
-    -> Typed aTag aValue { whoCreateda | canAccess : Anyone }
-    -> Typed bTag bValue { whoCreatedb | canAccess : Anyone }
+    -> Val whoCreatedA aTag Public aValue
+    -> Val whoCreatedB bTag Public bValue
     -> resultValue
-values2 binOp aTyped bTyped =
-    binOp (value aTyped) (value bTyped)
+val2 binOp aTyped bTyped =
+    binOp (val aTyped) (val bTyped)
 
 
 {-| After calling `tag` or modifying a checked value, you get a `Tagged`. To tell the type that the result value is `Checked`, use `isChecked tag`.
@@ -188,81 +226,46 @@ The type of `tag` might even change in that operation.
 
     oddPlusOdd : Odd -> Odd -> Even
     oddPlusOdd oddToAdd =
-        Typed.map2 (+) oddToAdd
+        Val.map2 (+) oddToAdd
             >> isChecked Even
 
 -}
 isChecked :
     checkedTag
-    -> Typed tag value { whoCanAccess | createdBy : whoCreated }
-    -> Typed checkedTag value { whoCanAccess | createdBy : NoUser }
+    -> Val whoCreated tag whoCanAccess value
+    -> Val Checked checkedTag whoCanAccessChecked value
 isChecked _ =
-    \(Typed value_) -> Typed value_
+    \(Val value_) -> Val value_
 
 
 
 -- ## no need to check
 
 
-{-| Using its value isn't allowed.
-
-    type alias Password =
-        TaggedHidden PasswordTag String
-
-    type PasswordTag
-        = Password Never
-
-    type alias User =
-        { password : Password
-
-        --...
-        }
-
-    showUsYourPassword user =
-        -- compile-time error
-        user.password |> Typed.value
-
-The only thing you can still use is `==` on 2 `TaggedHidden`s of the same type.
-
--}
-type alias TaggedHidden tag value =
-    Typed
-        tag
-        value
-        { createdBy : Anyone
-        , canAccess : NoUser
-        }
-
-
 {-| Alter the value inside.
 
-If the `Typed` was a `Checked`, it becomes a `Typed`.
+If the `Val` was a `Checked`, it becomes a `Tagged`.
 
     type alias Meters =
-        Typed MetersTag Int Typed
-
-    type alias Millimeters =
-        Typed MilliMetersTag Typed
+        Val Tagged MetersTag Public Int
 
     go1km : Meters -> Meters
     go1km =
-        Typed.map ((+) 1000)
+        Val.map ((+) 1000)
 
 -}
 map :
     (value -> mappedValue)
-    -> Typed tag value { whoCanAccess | createdBy : whoCreated }
-    -> Typed mappedTag mappedValue { whoCanAccess | createdBy : Anyone }
+    -> Val whoCreated tag whoCanAccess value
+    -> Val Tagged tag whoCanAccess mappedValue
 map alter =
-    \(Typed value_) -> alter value_ |> Typed
+    \(Val value_) -> alter value_ |> Val
 
 
-{-| Use the values of 2 `Typed`s to return a result.
-
-The result becomes a `CreatableAndModifiable` with the same reading permission as the 2 inputs.
+{-| Use the values of 2 `Val`s to return a result. The result becomes a `Tagged`.
 
     type alias PrimeNumber =
-        Typed PrimeNumberTag Int Checked
+        Val Checked PrimeNumberTag Public Int
 
     prime3 : PrimeNumber
     prime3 =
@@ -271,72 +274,106 @@ The result becomes a `CreatableAndModifiable` with the same reading permission a
     prime5 =
         tag 5 |> isChecked PrimeNumber
 
-Anywhere
-
-    Typed.values2 (+) prime3 prime5
-    --> 8
-
 In another module
 
     type alias NonPrime =
-        Checked NonPrimeTag Int
+        Val Checked NonPrimeTag Public Int
 
+    fromMultiplyingPrimes : Prime -> Prime -> NonPrime
     fromMultiplyingPrimes aPrime bPrime =
-        Typed.map2 (*) aPrime bPrime
+        Val.map2 (*) aPrime bPrime
             |> isChecked NonPrime
 
 -}
 map2 :
     (aValue -> bValue -> combinedValue)
-    -> Typed aTag aValue { whoCanAccess | createdBy : aWhoCanCreate }
-    -> Typed bTag bValue { whoCanAccess | createdBy : bWhoCanCreate }
-    -> Typed combinedTag combinedValue { whoCanAccess | createdBy : Anyone }
+    -> Val whoCanCreateA aTag whoCanAccess aValue
+    -> Val whoCanCreateB bTag whoCanAccess bValue
+    -> Val Tagged combinedTag whoCanAccess combinedValue
 map2 binOp aTyped bTyped =
     let
-        (Typed aValue) =
+        (Val aValue) =
             aTyped
 
-        (Typed bValue) =
+        (Val bValue) =
             bTyped
     in
-    binOp aValue bValue |> Typed
+    binOp aValue bValue |> Val
 
 
+{-| If you have an `Internal`, its value isn't readable by users.
 
--- ## hidden
-
-
-{-| A `Checked` value, but not everything about the `value` is exposed. This allows
-
-  - hiding implementation details
-  - hiding data you don't want users to see
+If you have the `tag` however, you can access this data hidden from users.
 
 -}
-type alias CheckedHidden tag value =
-    Typed
-        tag
-        value
-        { createdBy : NoUser
-        , canAccess : NoUser
-        }
-
-
-{-| If you have a `CheckedHidden`, its value isn't readable by users.
-
-If you have the `tag` however, you can access this data hidden from the user.
-
--}
-hiddenValueIn :
+internal :
     tag
-    -> Typed tag value { whoCreated | canAccess : NoUser }
+    -> Val whoCanCreate tag Internal value
     -> value
-hiddenValueIn _ =
-    \(Typed value_) -> value_
+internal _ =
+    \(Val value_) -> value_
 
 
+{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Tagged` `Public` `Val`s.
+-}
 serialize :
     Serialize.Codec error value
-    -> Serialize.Codec error (Tagged tag value)
+    -> Serialize.Codec error (Val Tagged tag Public value)
 serialize serializeValue =
     serializeValue
-        |> Serialize.map tag value
+        |> Serialize.map tag val
+
+
+{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Checked`s.
+
+We don't trust that the values we encode still have the same promises as our `Checked`s.
+
+Choose a value it can convert from & to and serialize that.
+
+    module Nat exposing (serialize)
+
+    type NatTag
+        = Nat
+
+    serialize =
+        Serialize.int
+            |> Val.serializeChecked Nat
+                (\int ->
+                    if int >= 0 then
+                        Ok int
+
+                    else
+                        Err "Int was negative, so it couldn't be decoded as a Nat"
+                )
+
+    module EfficientList exposing (serialize)
+
+    type EfficientListTag
+        = EfficientList
+
+    type alias EfficientList =
+        Val Checked EfficientListTag
+            Internal { list : List a, length : Int }
+
+    serialize =
+        Serialize.map .list identity
+            |> Serialize.list
+            |> Val.serializeChecked EfficientList
+                (\list ->
+                    Ok { list = list, length = List.length length }
+                )
+
+-}
+serializeChecked :
+    tag
+    -> (value -> Result error value)
+    -> Serialize.Codec error value
+    ->
+        Serialize.Codec
+            error
+            (Val Checked tag whoCanAccess value)
+serializeChecked tag_ checkValue serializeValue =
+    serializeValue
+        |> Serialize.mapValid
+            (checkValue >> Result.map (tag >> isChecked tag_))
+            (\(Val value_) -> value_)

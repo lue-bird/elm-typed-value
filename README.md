@@ -1,22 +1,18 @@
 # elm-typed-value
 
-> no more 1-constructor types
+> better 1-constructor types
 
 Fundamental concepts are similar to [Prior art](#Prior-Art):
 
-A value is wrapped in the `type Typed` with a phantom `tag`.
-So in the end, a `Typed Dollar Int ...` can't be called a `Typed Euro Int ...`.
+A value is wrapped in the `type Val` with a phantom `tag`.
 
-For **every** `type` that has just 1 constructor with a value
+A `Val ... Meters ... Float` can't be called a `Val ... Kilos ... Float` anymore!
+
+For `type`s with just 1 constructor with a value a `Val` can be a good replacement.
 ```elm
 type Special
     = Special Value
-```
-some `Typed` is better suited!
 
-You get rid of always writing the same mehods for those types
-
-```elm
 extract (Special value) =
     value
 
@@ -26,9 +22,27 @@ map alter (Special value) =
 --...
 ```
 
-while adding type-safety on your way.
+You get rid of writing and calling different mehods for those types:
 
-There are 2 kinds of `Typed`:
+```elm
+naturalNumber |> NaturalNumber.toInt
+height |> Meters.toFloat
+oneWeight |> Kilos.map ((+) (Kilos.toFloat otherWeight))
+if
+    (oneHeight |> Meters.toFloat)
+        > (otherHeight |> Meters.toFloat)
+then
+```
+Do you really have to remind yourself every step that you're still operating on `Meters` or `Kilos`? With `Val`:
+```elm
+val naturalNumber
+val height
+Val.map2 (+) oneWeight otherWeight
+if val2 (>) oneHeight otherHeight then
+```
+
+
+There are 2 kinds of `Val`:
 
   - `Checked`, if the type should only contain "validated" values
 
@@ -50,79 +64,74 @@ There are 2 kinds of `Typed`:
         Meters Float
     ```
 
-    Users can then access the `Float` `value`, update it & create new `Meters` everywhere
+    Users can update & create a new `Meters` everywhere
 
 
-If you don't want users to access the `value` directly, use `CheckedHidden` / `TaggedHidden`.
+If you want users to access the value with `val`, use `Public`; use `Internal` to hide it from users.
 
 
 # examples
 
 ```elm
-import Typed
+import val
     exposing
-        ( Typed, NoUser, Anyone
-        , Tagged, Checked, CheckedHidden, TaggedHidden
-        , tag, hiddenValueIn, isChecked
+        ( Val, Tagged, Public, Checked, Internal
+        , tag, val, val2, isChecked
         )
 ```
 
-## `Tagged`
+## `Tagged` + `Public`
 
 ```elm
-type alias Length unit =
-    Tagged (LengthUnit unit) Float
+type alias Pixels =
+    Val Tagged PixelsTag Public Float
 
-type LengthUnit unit
-    = LengthUnit Never
+type PixelsTag
+    = Pixels Never
 
-type Meters = Meters Never
-type Millimeters = Millimeters Never
-
--- use a type annotation to say which units are translated
-metersToMillimeters : Length Meters -> Length Millimeters
-metersToMillimeters =
-    Typed.map ((*) 1000)
-
--- annotate to set the unit
-heightEiffelTower : Length Meters
-heightEiffelTower =
-    tag 300
+-- use a type annotation to say what the result is
+ratio : Int -> Int -> ( Pixels, Pixels )
+ratio w h =
+    ( tag w, tag h )
 ```
 
 ```elm
-heightEiffelTower |> metersToMillimeters
-    |> metersToMillimeters
+-- annotate to say it's in Pixels
+defaultWindowWidth : Pixels
+defaultWindowWidth =
+    Val.map2 (+)
+        (tag 700)
+        (borderWidth |> Val.map ((*) 2))
+
+borderWidth : Pixels
+borderWidth =
+    tag 5
+
+val defaultWindowWidth
+--> 710
 ```
-→ compile-time exception
-> Expected: `Length Millimeters -> Length Millimeters`
 
-> Found: `Length Meters -> Length Millimeters`
-
-## `Checked`
+## `Checked` + `Public`
 
 ```elm
 module Even exposing
-    ( Even
+    ( Even, zero, two
     , multiply, add
-    , zero, two
     )
 
 type alias Even =
-    Checked EvenTag Int
+    Val Checked EvenTag Public Int
 
 -- don't expose this
 type EvenTag = Even
 
 multiply : Int -> Even -> Even
 multiply int =
-    Typed.map ((*) int)
-        >> isChecked Even
+    Val.map ((*) int) >> isChecked Even
 
 add : Even -> Even -> Even
 add toAdd =
-    Typed.map2 (+) toAdd
-        >> isChecked Even
+    Val.map2 (+) toAdd >> isChecked Even
 
 zero : Even
 zero =
@@ -139,14 +148,14 @@ Then outside this module
 cakeForEvenNumbers : Even -> Cake
 
 cakeForEvenNumbers (tag 3)
---> compile-time error: isn't of type Checked
+--> compile-time error: isn't of type Val ... Public ...
 
 cakeForEvenNumbers
     (Even.two |> Even.multiply -5)
 --> Cake
 ```
 
-## `CheckedHidden`
+## `Checked` + `Internal`
 
 A validated value that can't be directly accessed by a user.
 
@@ -158,45 +167,39 @@ module Id exposing (Id, random, toBytes, toString)
 import Random
 
 type alias Id =
-    CheckedHidden IdTag CurrentImplementation
-
--- left as an implementation detail
--- might change in the future
--- but the API should stay the same
-type alias CurrentImplementation =
-    String
+    Val Checked IdTag Internal String
 
 type IdTag = Id
 
 random : Random.Generator Id
 random =
     Random.list 16 ({-...-})
+        |> Random.map String.fromList
         |> Random.map (isChecked Id)
 
+-- the API stays the same even if the implementation changes
 toBytes --...
 toString --...
 ```
 No `Id` can be created outside this package!
 
-## Combined with `TaggedHidden`
+## Combined with `Tagged` + `Internal`
 
 ```elm
 module Password exposing (UncheckedPassword, GoodPassword, isGood, toOnlyDots)
 
 type alias Password goodOrUnchecked =
-    Typed PasswordTag String { goodOrUnchecked | canAccess : NoUser }
+    Val goodOrUnchecked PasswordTag Internal String
 
 -- don't expose the tag
 type PasswordTag
     = Password
 
 type alias GoodPassword =
-    Password { createdBy : NoUser }
-    -- which makes it a CheckedHidden
+    Password Checked
 
 type alias UncheckedPassword =
-    Password { createdBy : Anyone }
-    -- which makes it a TaggedHidden
+    Password Tagged
 
 
 isGood :
@@ -204,7 +207,7 @@ isGood :
 isGood passwordToTest =
     let
         passwordString =
-            hiddenValueIn Password passwordToTest
+            Val.internal Password passwordToTest
     in
     if (passwordString |> String.length) < 10 then
         Err "Use at lest 10 letters & symbols."
@@ -225,7 +228,7 @@ You can then decide that only a part of the information should be accessible.
 -- doesn't expose too much information.
 toOnlyDots : Password goodOrUnchecked -> String
 toOnlyDots =
-    hiddenValueIn Password
+    Val.internal Password
         >> String.length
         >> (\length ->
                 List.repeat length '·'
@@ -234,10 +237,6 @@ toOnlyDots =
 ```
 In another module
 ```elm
-type alias User =
-    { name : String
-    , password : GoodPassword
-        
 type alias Model =
     { passwordTypedIntoRegister : UncheckedPassword
         --cannot access the password the user typed
@@ -270,30 +269,32 @@ update msg model =
 
 view { passwordTypedIntoRegister } =
     Html.div []
-        [ Html.div [] [ text "register" ]
+        [ Html.div [] [ Html.text "register" ]
         , Html.input
-            [ onInput (tag >> PasswordTypedIntoRegisterChanged)
+            [ onInput
                 --not accessible from now on
-            , value (Password.toOnlyDots passwordTypedIntoRegister)
+                (tag >> PasswordTypedIntoRegisterChanged)
+            , Html.value (Password.toOnlyDots passwordTypedIntoRegister)
             ]
             []
         , case Password.isGood passwordTypedIntoRegister of
             Ok goodPassword ->
                 Html.button
                     [ onClick (Register goodPassword) ]
-                    [ text "Create account" ]
+                    [ Html.text "Create account" ]
+                
             Err message ->
                 text message
         ]
 ```
 ```elm
-leak (Typed.value passwordTypedIntoRegister)
+leak (val passwordTypedIntoRegister)
 -- or
-leak (Typed.value userPassword)
+leak (val userPassword)
 ```
-→ compile-time error: Can't access the `value` inside a `Hidden...`.
+→ compile-time error: Can't access the value inside a `Internal`.
 
-## When not to use `Checked`/`CheckedHidden`
+## When not to use `Checked`
 
 There might be a type that can guarantee these promises even if created by users.
 
@@ -308,7 +309,7 @@ type alias GoodPassword howMuchLongerThan10 maxLength lengthMaybeN =
         )
         Char
 ```
-Used here: [`elm-bounded-array`](https://package.elm-lang.org/packages/lue-bird/elm-bounded-array/latest/).
+Used: [`elm-bounded-array`](https://package.elm-lang.org/packages/lue-bird/elm-bounded-array/latest/).
 
 ## Prior art
 This package wouldn't exist without a lot of inspiration from those packages.
