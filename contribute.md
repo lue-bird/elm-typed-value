@@ -10,7 +10,7 @@
 - share your thoughts (read "design decisions.md")
 - add useful operations like `bind` or `extend`
 
-If you have questions, don't hesitate to ask (e.g. start a discussion in github)!
+If you have questions, don't hesitate to ask (e.g. in slack (@lue) or by starting a discussion in github)!
 
 ### Summary Guide
 
