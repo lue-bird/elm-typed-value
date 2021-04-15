@@ -7,7 +7,7 @@
 
 ## What you can do
 
-- share your thoughts
+- share your thoughts (read "design decisions.md")
 - add useful operations like `bind` or `extend`
 
 If you have questions, don't hesitate to ask (e.g. start a discussion in github)!
