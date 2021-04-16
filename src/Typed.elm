@@ -286,10 +286,10 @@ In another module
 
 -}
 map2 :
-    (value -> value -> value)
+    (value -> value -> mappedValue)
     -> Typed whoCanCreateA tag whoCanAccess value
     -> Typed whoCanCreateB tag whoCanAccess value
-    -> Typed Tagged tag whoCanAccess value
+    -> Typed Tagged tag whoCanAccess mappedValue
 map2 binOp aTyped bTyped =
     let
         (Typed aValue) =
