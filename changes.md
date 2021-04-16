@@ -19,3 +19,7 @@ Changed `Typed tag value { createdBy : whoCreated, canAccess : whoCanAccess }` t
 
 Renamed `Val` module & type back to `Typed`
 - changed `map2` type to `tag -> tag -> tag` & `value -> value -> value`
+
+## 4.0.0
+
+- changed `map2` type to `value -> value -> mappedValue` like in `map`
