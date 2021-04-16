@@ -1,13 +1,13 @@
 module UsePixels exposing (defaultWindowWidth)
 
 import Pixels exposing (Pixels)
-import Val exposing (tag)
+import Typed exposing (tag)
 
 defaultWindowWidth : Pixels
 defaultWindowWidth =
-    Val.map2 (+)
+    Typed.map2 (+)
         (tag 700)
-        (borderWidth |> Val.map ((*) 2))
+        (borderWidth |> Typed.map ((*) 2))
 
 borderWidth : Pixels
 borderWidth =

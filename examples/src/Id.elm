@@ -1,11 +1,11 @@
 module Id exposing (Id, random, toString)
 
 import Random
-import Val exposing (Checked, Internal, Val, isChecked, tag)
+import Typed exposing (Checked, Internal, Typed, isChecked, tag)
 
 
 type alias Id =
-    Val Checked IdTag Internal String
+    Typed Checked IdTag Internal String
 
 
 type IdTag
@@ -24,4 +24,4 @@ random =
 
 toString : Id -> String
 toString =
-    Val.internal Id
+    Typed.internal Id

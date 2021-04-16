@@ -1,5 +1,5 @@
-module Val exposing
-    ( Val
+module Typed exposing
+    ( Typed
     , Tagged, tag, map, map2
     , Checked, isChecked
     , Public, val, val2
@@ -9,7 +9,7 @@ module Val exposing
 
 {-|
 
-@docs Val
+@docs Typed
 
 
 ## who can create
@@ -47,25 +47,25 @@ module Val exposing
 import Serialize
 
 
-{-| A value is wrapped in the `type Val` with a phantom `tag`.
+{-| A value is wrapped in the `type Typed` with a phantom `tag`.
 
-A `Val ... Meters ... Float` can't be called a `Val ... Kilos ... Float` anymore!
+A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just 1 constructor with a value a `Val` can be a good replacement.
+For `type`s with just 1 constructor with a value a `Typed` can be a good replacement.
 
 
 ### who can construct such a value
 
-  - [`Checked`](Val#Checked)
+  - [`Checked`](Typed#Checked)
 
-  - [`Tagged`](Val#Tagged)
+  - [`Tagged`](Typed#Tagged)
 
 
 ### who can access the value
 
-  - [`Public`](Val#Public)
+  - [`Public`](Typed#Public)
 
-  - [`Internal`](Val#Internal)
+  - [`Internal`](Typed#Internal)
 
 all promise additional type-safety.
 
@@ -74,10 +74,10 @@ all promise additional type-safety.
 
     map :
         (value -> mappedValue)
-        -> Val whoCanCreate tag whoCanAccess value
-        -> Val Tagged tag whoCanAccess
+        -> Typed whoCanCreate tag whoCanAccess value
+        -> Typed Tagged tag whoCanAccess
 
-Is saying: `map` works on every `Val` and returns a value that is just `Tagged`, but not `Checked`.
+Is saying: `map` works on every `Typed` and returns a value that is just `Tagged`, but not `Checked`.
 Explaining `whoCanAccess`:
 
   - If the input is `Public`
@@ -86,11 +86,11 @@ Explaining `whoCanAccess`:
 the result will be too.
 
 -}
-type Val whoCreated tag whoCanAccess value
-    = Val value
+type Typed whoCreated tag whoCanAccess value
+    = Typed value
 
 
-{-| Only the ones with access to the `tag` constructor can access the `Val.internal`.
+{-| Only the ones with access to the `tag` constructor can access the `Typed.internal`.
 
 Meaning that access can be limited to
 
@@ -100,7 +100,7 @@ Meaning that access can be limited to
 module Special exposing (Special)
 
 type alias Special =
-    Val Tagged SpecialTag Internal SpecialValue
+    Typed Tagged SpecialTag Internal SpecialValue
 ```
 
   - inside a package (only with `Checked`)
@@ -123,7 +123,7 @@ elm.json 'exposed-modules' :
 This generally helps hiding implementation details.
 
     type alias OptimizedList a =
-        Val Checked OptimizedListTag Internal (Implementation a)
+        Typed Checked OptimizedListTag Internal (Implementation a)
 
     type alias Implementation a =
         { list : List a, length : Int }
@@ -143,7 +143,7 @@ type Public
 
 {-| Anyone is able to create one of those.
 
-Example `Val Tagged MetersTag ... Float`
+Example `Typed Tagged MetersTag ... Float`
 
 → The right choice, as every `Float` is a valid description of `Meters`
 
@@ -167,32 +167,32 @@ type Checked
 
 {-| Create a new tagged value.
 
-  - can be `Checked` with [`isChecked`](Val#isChecked)
+  - can be `Checked` with [`isChecked`](Typed#isChecked)
   - becomes `Internal/Public` when annotated that way
 
 Modifying won't change the type.
 
 -}
-tag : value -> Val Tagged tag whoCanAccess value
+tag : value -> Typed Tagged tag whoCanAccess value
 tag value_ =
-    Val value_
+    Typed value_
 
 
 
 -- ## access
 
 
-{-| Read the value inside a `Public` `Val`.
+{-| Read the value inside a `Public` `Typed`.
 -}
-val : Val whoCreated tag Public value -> value
+val : Typed whoCreated tag Public value -> value
 val =
-    \(Val value_) -> value_
+    \(Typed value_) -> value_
 
 
 {-| Use the values of 2 `Accessible`s to return a result.
 
     type alias Prime =
-        Val Checked PrimeTag Public Int
+        Typed Checked PrimeTag Public Int
 
     prime3 =
         tag 3 |> isChecked Prime
@@ -213,8 +213,8 @@ Anywhere
 -}
 val2 :
     (aValue -> bValue -> resultValue)
-    -> Val whoCreatedA aTag Public aValue
-    -> Val whoCreatedB bTag Public bValue
+    -> Typed whoCreatedA aTag Public aValue
+    -> Typed whoCreatedB bTag Public bValue
     -> resultValue
 val2 binOp aTyped bTyped =
     binOp (val aTyped) (val bTyped)
@@ -226,16 +226,16 @@ The type of `tag` might even change in that operation.
 
     oddPlusOdd : Odd -> Odd -> Even
     oddPlusOdd oddToAdd =
-        Val.map2 (+) oddToAdd
+        Typed.map2 (+) oddToAdd
             >> isChecked Even
 
 -}
 isChecked :
     checkedTag
-    -> Val whoCreated tag whoCanAccess value
-    -> Val Checked checkedTag whoCanAccessChecked value
+    -> Typed whoCreated tag whoCanAccess value
+    -> Typed Checked checkedTag whoCanAccessChecked value
 isChecked _ =
-    \(Val value_) -> Val value_
+    \(Typed value_) -> Typed value_
 
 
 
@@ -244,28 +244,28 @@ isChecked _ =
 
 {-| Alter the value inside.
 
-If the `Val` was a `Checked`, it becomes a `Tagged`.
+If the `Typed` was a `Checked`, it becomes a `Tagged`.
 
     type alias Meters =
-        Val Tagged MetersTag Public Int
+        Typed Tagged MetersTag Public Int
 
     go1km : Meters -> Meters
     go1km =
-        Val.map ((+) 1000)
+        Typed.map ((+) 1000)
 
 -}
 map :
     (value -> mappedValue)
-    -> Val whoCreated tag whoCanAccess value
-    -> Val Tagged tag whoCanAccess mappedValue
+    -> Typed whoCreated tag whoCanAccess value
+    -> Typed Tagged tag whoCanAccess mappedValue
 map alter =
-    \(Val value_) -> alter value_ |> Val
+    \(Typed value_) -> alter value_ |> Typed
 
 
-{-| Use the values of 2 `Val`s to return a result. The result becomes a `Tagged`.
+{-| Use the values of 2 `Typed`s to return a result. The result becomes a `Tagged`.
 
     type alias PrimeNumber =
-        Val Checked PrimeNumberTag Public Int
+        Typed Checked PrimeNumberTag Public Int
 
     prime3 : PrimeNumber
     prime3 =
@@ -277,28 +277,28 @@ map alter =
 In another module
 
     type alias NonPrime =
-        Val Checked NonPrimeTag Public Int
+        Typed Checked NonPrimeTag Public Int
 
     fromMultiplyingPrimes : Prime -> Prime -> NonPrime
     fromMultiplyingPrimes aPrime bPrime =
-        Val.map2 (*) aPrime bPrime
+        Typed.map2 (*) aPrime bPrime
             |> isChecked NonPrime
 
 -}
 map2 :
     (aValue -> bValue -> combinedValue)
-    -> Val whoCanCreateA aTag whoCanAccess aValue
-    -> Val whoCanCreateB bTag whoCanAccess bValue
-    -> Val Tagged combinedTag whoCanAccess combinedValue
+    -> Typed whoCanCreateA aTag whoCanAccess aValue
+    -> Typed whoCanCreateB bTag whoCanAccess bValue
+    -> Typed Tagged combinedTag whoCanAccess combinedValue
 map2 binOp aTyped bTyped =
     let
-        (Val aValue) =
+        (Typed aValue) =
             aTyped
 
-        (Val bValue) =
+        (Typed bValue) =
             bTyped
     in
-    binOp aValue bValue |> Val
+    binOp aValue bValue |> Typed
 
 
 {-| If you have an `Internal`, its value isn't readable by users.
@@ -308,17 +308,17 @@ If you have the `tag` however, you can access this data hidden from users.
 -}
 internal :
     tag
-    -> Val whoCanCreate tag Internal value
+    -> Typed whoCanCreate tag Internal value
     -> value
 internal _ =
-    \(Val value_) -> value_
+    \(Typed value_) -> value_
 
 
-{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Tagged` `Public` `Val`s.
+{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Tagged` `Public` `Typed`s.
 -}
 serialize :
     Serialize.Codec error value
-    -> Serialize.Codec error (Val Tagged tag Public value)
+    -> Serialize.Codec error (Typed Tagged tag Public value)
 serialize serializeValue =
     serializeValue
         |> Serialize.map tag val
@@ -337,7 +337,7 @@ Choose a value it can convert from & to and serialize that.
 
     serialize =
         Serialize.int
-            |> Val.serializeChecked Nat
+            |> Typed.serializeChecked Nat
                 (\int ->
                     if int >= 0 then
                         Ok int
@@ -352,13 +352,13 @@ Choose a value it can convert from & to and serialize that.
         = EfficientList
 
     type alias EfficientList =
-        Val Checked EfficientListTag
+        Typed Checked EfficientListTag
             Internal { list : List a, length : Int }
 
     serialize =
         Serialize.map .list identity
             |> Serialize.list
-            |> Val.serializeChecked EfficientList
+            |> Typed.serializeChecked EfficientList
                 (\list ->
                     { list = list
                     , length = List.length length
@@ -374,9 +374,9 @@ serializeChecked :
     ->
         Serialize.Codec
             error
-            (Val Checked tag whoCanAccess value)
+            (Typed Checked tag whoCanAccess value)
 serializeChecked tag_ checkValue serializeValue =
     serializeValue
         |> Serialize.mapValid
             (checkValue >> Result.map (tag >> isChecked tag_))
-            (\(Val value_) -> value_)
+            (\(Typed value_) -> value_)

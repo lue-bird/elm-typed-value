@@ -2,7 +2,7 @@
 
 ## naming
 
-Why is the type & module called `Val`?
+Why is the type & module called `Typed`?
 - I wanted the module name to be short
     - so that calling `TypedValue.map`/... isn't that verbose
 - I wanted the module name to match the type name

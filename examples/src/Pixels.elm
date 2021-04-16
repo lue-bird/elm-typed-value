@@ -1,10 +1,10 @@
 module Pixels exposing (Pixels, ratio)
 
-import Val exposing (Public, Tagged, Val, tag)
+import Typed exposing (Public, Tagged, Typed, tag)
 
 
 type alias Pixels =
-    Val Tagged PixelsTag Public Int
+    Typed Tagged PixelsTag Public Int
 
 
 type PixelsTag

@@ -5,7 +5,7 @@ import Html exposing (text)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
 import Password exposing (GoodPassword, UncheckedPassword)
-import Val exposing (tag)
+import Typed exposing (tag)
 
 
 main : Program () Model Msg

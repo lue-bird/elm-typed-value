@@ -4,11 +4,11 @@
 
 Fundamental concepts are similar to [Prior art](#Prior-Art):
 
-A value is wrapped in the `type Val` with a phantom `tag`.
+A value is wrapped in the `type Typed` with a phantom `tag`.
 
-A `Val ... Meters ... Float` can't be called a `Val ... Kilos ... Float` anymore!
+A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just 1 constructor with a value a `Val` can be a good replacement.
+For `type`s with just 1 constructor with a value a `Typed` can be a good replacement.
 ```elm
 type Special
     = Special Value
@@ -33,16 +33,16 @@ if
         > (otherHeight |> Meters.toFloat)
 then
 ```
-Do you really have to remind yourself every step that you're still operating on `Meters` or `Kilos`? With `Val`:
+Do you really have to remind yourself every step that you're still operating on `Meters` or `Kilos`? With `Typed`:
 ```elm
 val naturalNumber
 val height
-Val.map2 (+) oneWeight otherWeight
+Typed.map2 (+) oneWeight otherWeight
 if val2 (>) oneHeight otherHeight then
 ```
 
 
-There are 2 kinds of `Val`:
+There are 2 kinds of `Typed`:
 
   - `Checked`, if the type should only contain "validated" values
 
@@ -75,7 +75,7 @@ If you want users to access the value with `val`, use `Public`; use `Internal` t
 ```elm
 import val
     exposing
-        ( Val, Tagged, Public, Checked, Internal
+        ( Typed, Tagged, Public, Checked, Internal
         , tag, val, val2, isChecked
         )
 ```
@@ -84,7 +84,7 @@ import val
 
 ```elm
 type alias Pixels =
-    Val Tagged PixelsTag Public Int
+    Typed Tagged PixelsTag Public Int
 
 type PixelsTag
     = Pixels Never
@@ -99,9 +99,9 @@ ratio w h =
 -- annotate to say it's in Pixels
 defaultWindowWidth : Pixels
 defaultWindowWidth =
-    Val.map2 (+)
+    Typed.map2 (+)
         (tag 700)
-        (borderWidth |> Val.map ((*) 2))
+        (borderWidth |> Typed.map ((*) 2))
 
 borderWidth : Pixels
 borderWidth =
@@ -120,18 +120,18 @@ module Even exposing
     )
 
 type alias Even =
-    Val Checked EvenTag Public Int
+    Typed Checked EvenTag Public Int
 
 -- don't expose this
 type EvenTag = Even
 
 multiply : Int -> Even -> Even
 multiply int =
-    Val.map ((*) int) >> isChecked Even
+    Typed.map ((*) int) >> isChecked Even
 
 add : Even -> Even -> Even
 add toAdd =
-    Val.map2 (+) toAdd >> isChecked Even
+    Typed.map2 (+) toAdd >> isChecked Even
 
 zero : Even
 zero =
@@ -148,7 +148,7 @@ Then outside this module
 cakeForEvenNumbers : Even -> Cake
 
 cakeForEvenNumbers (tag 3)
---> compile-time error: isn't of type Val ... Public ...
+--> compile-time error: isn't of type Typed ... Public ...
 
 cakeForEvenNumbers
     (Even.two |> Even.multiply -5)
@@ -167,7 +167,7 @@ module Id exposing (Id, random, toBytes, toString)
 import Random
 
 type alias Id =
-    Val Checked IdTag Internal String
+    Typed Checked IdTag Internal String
 
 type IdTag = Id
 
@@ -189,7 +189,7 @@ No `Id` can be created outside this package!
 module Password exposing (UncheckedPassword, GoodPassword, isGood, toOnlyDots)
 
 type alias Password goodOrUnchecked =
-    Val goodOrUnchecked PasswordTag Internal String
+    Typed goodOrUnchecked PasswordTag Internal String
 
 -- don't expose the tag
 type PasswordTag
@@ -207,7 +207,7 @@ isGood :
 isGood passwordToTest =
     let
         passwordString =
-            Val.internal Password passwordToTest
+            Typed.internal Password passwordToTest
     in
     if (passwordString |> String.length) < 10 then
         Err "Use at lest 10 letters & symbols."
@@ -228,7 +228,7 @@ You can then decide that only a part of the information should be accessible.
 -- doesn't expose too much information.
 toOnlyDots : Password goodOrUnchecked -> String
 toOnlyDots =
-    Val.internal Password
+    Typed.internal Password
         >> String.length
         >> (\length ->
                 List.repeat length '·'
