@@ -262,7 +262,7 @@ map alter =
     \(Typed value_) -> alter value_ |> Typed
 
 
-{-| Use the values of 2 `Typed`s to return a result. The result becomes a `Tagged`.
+{-| Use the values of 2 `Typed`s to return a `Tagged` result.
 
     type alias PrimeNumber =
         Typed Checked PrimeNumberTag Public Int
@@ -286,10 +286,10 @@ In another module
 
 -}
 map2 :
-    (aValue -> bValue -> combinedValue)
-    -> Typed whoCanCreateA aTag whoCanAccess aValue
-    -> Typed whoCanCreateB bTag whoCanAccess bValue
-    -> Typed Tagged combinedTag whoCanAccess combinedValue
+    (value -> value -> value)
+    -> Typed whoCanCreateA tag whoCanAccess value
+    -> Typed whoCanCreateB tag whoCanAccess value
+    -> Typed Tagged tag whoCanAccess value
 map2 binOp aTyped bTyped =
     let
         (Typed aValue) =
