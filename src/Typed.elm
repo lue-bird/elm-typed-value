@@ -3,7 +3,7 @@ module Typed exposing
     , Tagged, tag, map, map2
     , Checked, isChecked
     , Public, val, val2
-    , Internal, internal
+    , Internal, internalVal, internalVal2
     , serialize, serializeChecked
     )
 
@@ -35,7 +35,7 @@ module Typed exposing
 
 ### internal
 
-@docs Internal, internal
+@docs Internal, internalVal, internalVal2
 
 
 ## serialize
@@ -90,7 +90,7 @@ type Typed whoCreated tag whoCanAccess value
     = Typed value
 
 
-{-| Only the ones with access to the `tag` constructor can access the `Typed.internal`.
+{-| Only the ones with access to the `tag` constructor can access the `Typed.internalVal`.
 
 Meaning that access can be limited to
 
@@ -189,7 +189,7 @@ val =
     \(Typed value_) -> value_
 
 
-{-| Use the values of 2 `Accessible`s to return a result.
+{-| Use the values of 2 `Public` `Typed`s to return a result.
 
     type alias Prime =
         Typed Checked PrimeTag Public Int
@@ -306,12 +306,39 @@ map2 binOp aTyped bTyped =
 If you have the `tag` however, you can access this data hidden from users.
 
 -}
-internal :
+internalVal :
     tag
     -> Typed whoCanCreate tag Internal value
     -> value
-internal _ =
+internalVal _ =
     \(Typed value_) -> value_
+
+
+{-| Use the values of 2 `Internal` `Typed`s to return a result.
+
+    type alias OptimizedList a =
+        Typed
+            Checked
+            OptimizedListTag
+            Internal
+            { list : List a, length : Int }
+
+    type OptimizedListTag
+        = OptimizedList
+
+    equal a b =
+        internalVal2 (==) OptimizedList a OptimizedList b
+
+-}
+internalVal2 :
+    (aValue -> bValue -> resultValue)
+    -> aTag
+    -> Typed whoCreatedA aTag Internal aValue
+    -> bTag
+    -> Typed whoCreatedB bTag Internal bValue
+    -> resultValue
+internalVal2 binOp aTag aTyped bTag bTyped =
+    binOp (internalVal aTag aTyped) (internalVal bTag bTyped)
 
 
 {-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Tagged` `Public` `Typed`s.
