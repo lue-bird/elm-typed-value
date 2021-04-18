@@ -73,10 +73,10 @@ If you want users to access the value with `val`, use `Public`; use `Internal` t
 # examples
 
 ```elm
-import val
+import Typed
     exposing
         ( Typed, Tagged, Public, Checked, Internal
-        , tag, val, val2, isChecked
+        , tag, val, val2, isChecked, internalVal, internalVal2
         )
 ```
 
@@ -207,7 +207,7 @@ isGood :
 isGood passwordToTest =
     let
         passwordString =
-            Typed.internal Password passwordToTest
+            internalVal Password passwordToTest
     in
     if (passwordString |> String.length) < 10 then
         Err "Use at lest 10 letters & symbols."
@@ -228,7 +228,7 @@ You can then decide that only a part of the information should be accessible.
 -- doesn't expose too much information.
 toOnlyDots : Password goodOrUnchecked -> String
 toOnlyDots =
-    Typed.internal Password
+    internalVal Password
         >> String.length
         >> (\length ->
                 List.repeat length '·'

@@ -24,7 +24,7 @@ isGood : UncheckedPassword -> Result String GoodPassword
 isGood passwordToTest =
     let
         passwordString =
-            Typed.internalVal Password passwordToTest
+            internalVal Password passwordToTest
     in
     if (passwordString |> String.length) < 10 then
         Err "Use at lest 10 letters & symbols."
@@ -50,7 +50,7 @@ commonPasswords =
 
 toOnlyDots : Password goodOrUnchecked -> String
 toOnlyDots =
-    Typed.internalVal Password
+    internalVal Password
         >> String.length
         >> (\length ->
                 List.repeat length '·'

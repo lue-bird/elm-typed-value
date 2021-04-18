@@ -90,7 +90,7 @@ type Typed whoCreated tag whoCanAccess value
     = Typed value
 
 
-{-| Only the ones with access to the `tag` constructor can access the `Typed.internalVal`.
+{-| Only the ones with access to the `tag` constructor can access the `internalVal`.
 
 Meaning that access can be limited to
 
