@@ -24,4 +24,4 @@ random =
 
 toString : Id -> String
 toString =
-    Typed.internal Id
+    Typed.internalVal Id
