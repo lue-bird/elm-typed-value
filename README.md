@@ -76,7 +76,7 @@ If you want users to access the value with `val`, use `Public`; use `Internal` t
 import Typed
     exposing
         ( Typed, Tagged, Public, Checked, Internal
-        , tag, val, val2, isChecked, internalVal, internalVal2
+        , tag, val, val2, isChecked, internalVal
         )
 ```
 
