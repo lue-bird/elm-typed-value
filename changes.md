@@ -22,4 +22,6 @@ Renamed `Val` module & type back to `Typed`
 
 ## 4.0.0
 
+- added `internalVal2`
+- renamed `internal` to `internalVal`
 - changed `map2` type to `value -> value -> mappedValue` like in `map`
