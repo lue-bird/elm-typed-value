@@ -372,6 +372,7 @@ Choose a value it can convert from & to and serialize that.
                     else
                         Err "Int was negative, so it couldn't be decoded as a Nat"
                 )
+                identity
 
     module EfficientList exposing (serialize)
 
@@ -383,27 +384,28 @@ Choose a value it can convert from & to and serialize that.
             Internal { list : List a, length : Int }
 
     serialize =
-        Serialize.map .list identity
-            |> Serialize.list
-            |> Typed.serializeChecked EfficientList
-                (\list ->
-                    { list = list
-                    , length = List.length length
-                    }
-                        |> Ok
-                )
+        Typed.serializeChecked EfficientList
+            (\list ->
+                { list = list
+                , length = List.length length
+                }
+                    |> Ok
+            )
+            .list
+            Serialize.list
 
 -}
 serializeChecked :
     tag
-    -> (value -> Result error value)
+    -> (value -> Result error checkedValue)
+    -> (checkedValue -> value)
     -> Serialize.Codec error value
     ->
         Serialize.Codec
             error
-            (Typed Checked tag whoCanAccess value)
-serializeChecked tag_ checkValue serializeValue =
+            (Typed Checked tag whoCanAccess checkedValue)
+serializeChecked tag_ checkValue toValue serializeValue =
     serializeValue
         |> Serialize.mapValid
             (checkValue >> Result.map (tag >> isChecked tag_))
-            (\(Typed value_) -> value_)
+            (\(Typed value_) -> toValue value_)
