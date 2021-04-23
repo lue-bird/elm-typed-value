@@ -25,3 +25,7 @@ Renamed `Val` module & type back to `Typed`
 - added `internalVal2`
 - renamed `internal` to `internalVal`
 - changed `map2` type to `value -> value -> mappedValue` like in `map`
+
+## 5.0.0
+
+- changed type of `serializeChecked` to be able to map from & to a different value (like `Serialize.mapValid` already does).
