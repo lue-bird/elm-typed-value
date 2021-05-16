@@ -1,7 +1,7 @@
 module Password exposing (GoodPassword, UncheckedPassword, isGood, toOnlyDots)
 
 import Set exposing (Set)
-import Typed exposing (Checked, Internal, Tagged, Typed, isChecked, tag)
+import Typed exposing (Checked, Internal, Tagged, Typed, internalVal, isChecked, tag)
 
 
 type alias Password goodOrUnchecked =

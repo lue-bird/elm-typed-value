@@ -1,7 +1,7 @@
 module Id exposing (Id, random, toString)
 
 import Random
-import Typed exposing (Checked, Internal, Typed, isChecked, tag)
+import Typed exposing (Checked, Internal, Typed, internalVal, isChecked, tag)
 
 
 type alias Id =
