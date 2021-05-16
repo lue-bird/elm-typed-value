@@ -3,7 +3,7 @@
     "name": "lue-bird/elm-typed-value",
     "summary": "better 1-constructor types",
     "license": "MIT",
-    "version": "5.0.0",
+    "version": "5.0.1",
     "exposed-modules": [
         "Typed"
     ],
