@@ -60,14 +60,14 @@ There are 2 kinds of `Typed`:
 
     ```elm
     -- constructor can be used anywhere
-    type Meters =
-        Meters Float
+    type Cat =
+        Cat { name : String, mood : Mood }
     ```
 
-    Users can update & create a new `Meters` everywhere
+    Users can create **& update** new `Cat`s everywhere
 
 
-If you want users to access the value with `val`, use `Public`; use `Internal` to hide it from users.
+Use `Public` to allow to access the value with `val`; use `Internal` to hide it from users.
 
 
 # examples
@@ -81,6 +81,38 @@ import Typed
 ```
 
 ## `Tagged` + `Public`
+
+```elm
+type alias Pet tag specificProperties =
+    Typed Tagged tag Public
+        { specificProperties | name : String, mood : Mood }
+
+type alias Cat =
+    Pet CatTag { napsPerDay : Float }
+
+type alias Dog =
+    Pet DogTag { barksPerDay : Float }
+
+type CatTag
+    = Cat Never
+
+type DogTag
+    = Dog Never
+
+sit : Dog -> Dog
+sit =
+    Typed.map (\p -> { p | mood = Neutral })
+```
+
+```elm
+howdy : Cat
+howdy =
+    tag { name = "Howdy", mood = Happy, napsPerDay = 2.2 }
+
+howdy |> sit -- error
+```
+
+Another example:
 
 ```elm
 type alias Pixels =
