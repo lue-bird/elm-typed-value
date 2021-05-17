@@ -8,7 +8,8 @@ A value is wrapped in the `type Typed` with a phantom `tag`.
 
 A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just 1 constructor with a value a `Typed` can be a good replacement.
+For `type`s with just one constructor with a value, a `Typed` can be a good replacement.
+
 ```elm
 type Special
     = Special Value
@@ -22,7 +23,7 @@ map alter (Special value) =
 --...
 ```
 
-You get rid of writing and calling different mehods for those types:
+You get rid of writing and calling different mehods for those types.
 
 ```elm
 naturalNumber |> NaturalNumber.toInt
@@ -33,7 +34,9 @@ if
         > (otherHeight |> Meters.toFloat)
 then
 ```
+
 Do you really have to remind yourself every step that you're still operating on `Meters` or `Kilos`? With `Typed`:
+
 ```elm
 val naturalNumber
 val height
@@ -67,7 +70,7 @@ There are 2 kinds of `Typed`:
     Users can create **& update** new `Cat`s everywhere
 
 
-Use `Public` to allow to access the value with `val`; use `Internal` to hide it from users.
+Use `Public` to allow users to access the value (with `val`); use `Internal` to hide it from users.
 
 
 # examples
@@ -105,6 +108,7 @@ sit =
 ```
 
 ```elm
+-- annotate to say it's a Cat
 howdy : Cat
 howdy =
     tag { name = "Howdy", mood = Happy, napsPerDay = 2.2 }
@@ -128,13 +132,18 @@ ratio w h =
 ```
 
 ```elm
--- annotate to say it's in Pixels
 defaultWindowWidth : Pixels
 defaultWindowWidth =
     Typed.map2 (+)
-        (tag 700)
+        innerWindowWidth
         (borderWidth |> Typed.map ((*) 2))
 
+-- annotate to say it's in Pixels
+innerWindowWidth : Pixels
+innerWindowWidth =
+    tag 700
+
+-- annotate to say it's in Pixels
 borderWidth : Pixels
 borderWidth =
     tag 5
