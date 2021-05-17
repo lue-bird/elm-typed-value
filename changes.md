@@ -29,3 +29,11 @@ Renamed `Val` module & type back to `Typed`
 ## 5.0.0
 
 - changed type of `serializeChecked` to be able to map from & to a different value (like `Serialize.mapValid` already does).
+
+#### 5.0.1
+
+- added Pet example
+
+#### 5.0.2
+
+- updated typesafe-array example
