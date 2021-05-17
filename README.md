@@ -333,15 +333,10 @@ There might be a type that can guarantee these promises even if created by users
 Example `GoodPassword`:
 
 ```elm
-type alias GoodPassword howMuchLongerThan10 maxLength lengthMaybeN =
-    Arr
-        (In (Nat10Plus howMuchLongerThan10)
-            maxLength
-            lengthMaybeN
-        )
-        Char
+type alias GoodPassword =
+    Arr (Min Nat10) Char
 ```
-Used: [`elm-bounded-array`](https://package.elm-lang.org/packages/lue-bird/elm-bounded-array/latest/).
+Used: [`elm-typesafe-array`](https://package.elm-lang.org/packages/lue-bird/elm-typesafe-array/latest/).
 
 ## Prior art
 This package wouldn't exist without a lot of inspiration from those packages.
