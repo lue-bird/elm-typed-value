@@ -362,7 +362,9 @@ especially
 
 ```elm
 type alias Comment =
-    Typed Tagged CommentTag Public
-        { text : String, subComments : Comment }
+    Typed Tagged RecursiveTag Public
+        { text : String
+        , subComments : List Comment
+        }
 ```
 > This type alias is recursive, forming an infinite type.
