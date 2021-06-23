@@ -37,3 +37,7 @@ Renamed `Val` module & type back to `Typed`
 #### 5.0.2
 
 - updated typesafe-array example
+
+#### 5.0.3
+
+- added limit section
