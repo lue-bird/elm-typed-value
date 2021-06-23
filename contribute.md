@@ -5,14 +5,14 @@
 - Changes may be suggested through pull requests.
 - To discuss major changes, open up a feature request issue.
 
-## What you can do
+## you
 
 - share your thoughts (read "design decisions.md")
 - add useful operations like `bind` or `extend`
 
-If you have questions, don't hesitate to ask (e.g. in slack (@lue) or by starting a discussion in github)!
+If you have questions, don't hesitate to ask (e.g. in slack (@lue lue.the.bird@gmail.com) or by starting a discussion in github)!
 
-### Summary Guide
+### Guide
 
 commits look like this:
 > do details, make other details & this
