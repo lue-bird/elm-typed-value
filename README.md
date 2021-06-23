@@ -2,7 +2,7 @@
 
 > better 1-constructor types
 
-Fundamental concepts are similar to [prior art](#prior-art):
+Similar to [prior art](#prior-art):
 
 A value is wrapped in the `type Typed` with a phantom `tag`.
 
@@ -44,7 +44,6 @@ Typed.map2 (+) oneWeight otherWeight
 if val2 (>) oneHeight otherHeight then
 ```
 
-
 There are 2 kinds of `Typed`:
 
   - `Checked`, if the type should only contain "validated" values
@@ -70,7 +69,7 @@ There are 2 kinds of `Typed`:
     Users can create **& update** new `Cat`s everywhere
 
 
-Use `Public` to allow users to access the value (with `val`); use `Internal` to hide it from users.
+Use `Public` to allow users to access the value; use `Internal` to hide it from users.
 
 
 # examples
@@ -79,7 +78,7 @@ Use `Public` to allow users to access the value (with `val`); use `Internal` to 
 import Typed
     exposing
         ( Typed, Tagged, Public, Checked, Internal
-        , tag, val, val2, isChecked, internalVal
+        , tag, isChecked, val, val2, internalVal
         )
 ```
 
@@ -358,7 +357,7 @@ especially
 
 # limit
 
-`Typed` sadly can't replace `type`s when defining recursive `type alias`es.
+`Typed` sadly can't replace `type`s when defining recursive types.
 
 ```elm
 type alias Comment =
@@ -369,6 +368,7 @@ type alias Comment =
 ```
 elm:
 > This type alias is recursive, forming an infinite type.
+
 [recursive alias hint](https://github.com/elm/compiler/blob/master/hints/recursive-alias.md):
 > Somewhere in that cycle, you need to define an actual type to end the infinite expansion.
 
