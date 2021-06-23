@@ -2,13 +2,13 @@
 
 > better 1-constructor types
 
-Fundamental concepts are similar to [Prior art](#Prior-Art):
+Fundamental concepts are similar to [prior art](#prior-art):
 
 A value is wrapped in the `type Typed` with a phantom `tag`.
 
 A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just one constructor with a value, a `Typed` can be a good replacement.
+For `type`s with just one constructor with a value, a `Typed` can be a good replacement ([→ limits](#limit)).
 
 ```elm
 type Special
@@ -347,10 +347,22 @@ type alias GoodPassword =
 ```
 Used: [`elm-typesafe-array`](https://package.elm-lang.org/packages/lue-bird/elm-typesafe-array/latest/).
 
-## Prior art
+# prior art
+
 This package wouldn't exist without a lot of inspiration from those packages.
 - [Punie/elm-id](https://package.elm-lang.org/packages/Punie/elm-id/latest/)
 
 especially
 - [joneshf/elm-tagged](https://package.elm-lang.org/packages/joneshf/elm-tagged/latest/)
 - [IzumiSy/elm-typed](https://package.elm-lang.org/packages/IzumiSy/elm-typed/latest/)
+
+# limit
+
+`Typed` sadly can't replace recursive `type`s as you define `type alias`es.
+
+```elm
+type alias Comment =
+    Typed Tagged CommentTag Public
+        { text : String, subComments : Comment }
+```
+> This type alias is recursive, forming an infinite type.
