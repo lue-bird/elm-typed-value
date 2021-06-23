@@ -1,12 +1,17 @@
-module Recursive exposing (Recursive)
+module Recursive exposing (Comment)
 
-import Typed exposing (Typed, Tagged, Public)
+import Typed exposing (Public, Tagged, Typed)
+
 
 type alias Comment =
-    Typed Tagged RecursiveTag Public
-        { text : String
-        , subComments : List Comment
+    Typed
+        Tagged
+        CommentTag
+        Public
+        { message : String
+        , responses : Maybe Comment
         }
 
-type CommentTag =
-    CommentTag Never
+
+type CommentTag
+    = CommentTag Never
