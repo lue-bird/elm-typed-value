@@ -86,7 +86,7 @@ Explaining `whoCanAccess`:
 the result will be too.
 
 -}
-type Typed whoCreated tag whoCanAccess value
+type Typed whoCreated_ tag_ whoCanAccess_ value
     = Typed value
 
 
@@ -173,7 +173,7 @@ type Checked
 Modifying won't change the type.
 
 -}
-tag : value -> Typed Tagged tag whoCanAccess value
+tag : value -> Typed Tagged tag_ whoCanAccess_ value
 tag value_ =
     Typed value_
 
@@ -184,7 +184,7 @@ tag value_ =
 
 {-| Read the value inside a `Public` `Typed`.
 -}
-val : Typed whoCreated tag Public value -> value
+val : Typed whoCreated_ tag_ Public value -> value
 val =
     \(Typed value_) -> value_
 
@@ -213,8 +213,8 @@ Anywhere
 -}
 val2 :
     (aValue -> bValue -> resultValue)
-    -> Typed whoCreatedA aTag Public aValue
-    -> Typed whoCreatedB bTag Public bValue
+    -> Typed whoCreatedA_ aTag_ Public aValue
+    -> Typed whoCreatedB_ bTag_ Public bValue
     -> resultValue
 val2 binOp aTyped bTyped =
     binOp (val aTyped) (val bTyped)
@@ -232,8 +232,8 @@ The type of `tag` might even change in that operation.
 -}
 isChecked :
     checkedTag
-    -> Typed whoCreated tag whoCanAccess value
-    -> Typed Checked checkedTag whoCanAccessChecked value
+    -> Typed whoCreated_ tag_ whoCanAccess_ value
+    -> Typed Checked checkedTag whoCanAccessChecked_ value
 isChecked _ =
     \(Typed value_) -> Typed value_
 
@@ -256,7 +256,7 @@ If the `Typed` was a `Checked`, it becomes a `Tagged`.
 -}
 map :
     (value -> mappedValue)
-    -> Typed whoCreated tag whoCanAccess value
+    -> Typed whoCreated_ tag whoCanAccess value
     -> Typed Tagged tag whoCanAccess mappedValue
 map alter =
     \(Typed value_) -> alter value_ |> Typed
@@ -287,8 +287,8 @@ In another module
 -}
 map2 :
     (value -> value -> mappedValue)
-    -> Typed whoCanCreateA tag whoCanAccess value
-    -> Typed whoCanCreateB tag whoCanAccess value
+    -> Typed whoCanCreateA_ tag whoCanAccess value
+    -> Typed whoCanCreateB_ tag whoCanAccess value
     -> Typed Tagged tag whoCanAccess mappedValue
 map2 binOp aTyped bTyped =
     let
@@ -308,7 +308,7 @@ If you have the `tag` however, you can access this data hidden from users.
 -}
 internalVal :
     tag
-    -> Typed whoCanCreate tag Internal value
+    -> Typed whoCanCreate_ tag Internal value
     -> value
 internalVal _ =
     \(Typed value_) -> value_
@@ -333,9 +333,9 @@ internalVal _ =
 internalVal2 :
     (aValue -> bValue -> resultValue)
     -> aTag
-    -> Typed whoCreatedA aTag Internal aValue
+    -> Typed whoCreatedA_ aTag Internal aValue
     -> bTag
-    -> Typed whoCreatedB bTag Internal bValue
+    -> Typed whoCreatedB_ bTag Internal bValue
     -> resultValue
 internalVal2 binOp aTag aTyped bTag bTyped =
     binOp (internalVal aTag aTyped) (internalVal bTag bTyped)
@@ -345,7 +345,7 @@ internalVal2 binOp aTag aTyped bTag bTyped =
 -}
 serialize :
     Serialize.Codec error value
-    -> Serialize.Codec error (Typed Tagged tag Public value)
+    -> Serialize.Codec error (Typed Tagged tag_ Public value)
 serialize serializeValue =
     serializeValue
         |> Serialize.map tag val
@@ -403,7 +403,7 @@ serializeChecked :
     ->
         Serialize.Codec
             error
-            (Typed Checked tag whoCanAccess checkedValue)
+            (Typed Checked tag whoCanAccess_ checkedValue)
 serializeChecked tag_ checkValue toValue serializeValue =
     serializeValue
         |> Serialize.mapValid
