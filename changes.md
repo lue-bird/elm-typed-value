@@ -41,3 +41,7 @@ Renamed `Val` module & type back to `Typed`
 #### 5.0.3
 
 - added limit section
+
+### 5.1.0
+
+- added `theSmaller` and `theGreater`
