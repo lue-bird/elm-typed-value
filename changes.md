@@ -1,5 +1,36 @@
 # changelog
 
+### 5.1.0
+
+- added `theSmaller` and `theGreater`
+
+#### 5.0.3
+
+- added limit section
+
+#### 5.0.2
+
+- updated typesafe-array example
+
+#### 5.0.1
+
+- added Pet example
+
+## 5.0.0
+
+- changed type of `serializeChecked` to be able to map from & to a different value (like `Serialize.mapValid` already does).
+
+## 4.0.0
+
+- added `internalVal2`
+- renamed `internal` to `internalVal`
+- changed `map2` type to `value -> value -> mappedValue` like in `map`
+
+## 3.0.0
+
+Renamed `Val` module & type back to `Typed`
+- changed `map2` type to `tag -> tag -> tag` & `value -> value -> value`
+
 ## 2.0.0
 
 Changed `Typed tag value { createdBy : whoCreated, canAccess : whoCanAccess }` to `Val whoCanCreate tag whoCanAccess value`.
@@ -15,33 +46,3 @@ Changed `Typed tag value { createdBy : whoCreated, canAccess : whoCanAccess }` t
 - `map` now returns a `Tagged` with the same `tag`
 - added `serialize` & `serializeChecked`
 
-## 3.0.0
-
-Renamed `Val` module & type back to `Typed`
-- changed `map2` type to `tag -> tag -> tag` & `value -> value -> value`
-
-## 4.0.0
-
-- added `internalVal2`
-- renamed `internal` to `internalVal`
-- changed `map2` type to `value -> value -> mappedValue` like in `map`
-
-## 5.0.0
-
-- changed type of `serializeChecked` to be able to map from & to a different value (like `Serialize.mapValid` already does).
-
-#### 5.0.1
-
-- added Pet example
-
-#### 5.0.2
-
-- updated typesafe-array example
-
-#### 5.0.3
-
-- added limit section
-
-### 5.1.0
-
-- added `theSmaller` and `theGreater`
