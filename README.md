@@ -8,7 +8,7 @@ A value is wrapped in the `type Typed` with a phantom `tag`.
 
 A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just one constructor with a value, a `Typed` can be a good replacement (→ [minor limit](#limit)).
+For `type`s with just one constructor with a value, a `Typed` can be a good replacement (→ [limits](#limits)).
 
 ```elm
 type Special
@@ -23,7 +23,7 @@ map alter (Special value) =
 --...
 ```
 
-You get rid of writing and calling different mehods for those types.
+You get rid of writing and calling different functions for those types.
 
 ```elm
 naturalNumber |> NaturalNumber.toInt
@@ -355,29 +355,30 @@ especially
 - [joneshf/elm-tagged](https://package.elm-lang.org/packages/joneshf/elm-tagged/latest/)
 - [IzumiSy/elm-typed](https://package.elm-lang.org/packages/IzumiSy/elm-typed/latest/)
 
-# limit
+# limits
 
-`Typed` sadly can't replace `type`s when defining recursive types.
+1. If the internal value changes that's considered a breaking change.
+2. `Typed` sadly can't replace `type`s when defining recursive types:
 
-```elm
-type alias Comment =
-    Typed Tagged CommentTag Public
-        { message : String
-        , responses : List Comment
-        }
-```
-elm:
-> This type alias is recursive, forming an infinite type.
+    ```elm
+    type alias Comment =
+        Typed Tagged CommentTag Public
+            { message : String
+            , responses : List Comment
+            }
+    ```
+    elm:
+    > This type alias is recursive, forming an infinite type.
 
-[recursive alias hint](https://github.com/elm/compiler/blob/master/hints/recursive-alias.md):
-> Somewhere in that cycle, you need to define an actual type to end the infinite expansion.
+    [recursive alias hint](https://github.com/elm/compiler/blob/master/hints/recursive-alias.md):
+    > Somewhere in that cycle, you need to define an actual type to end the infinite expansion.
 
-My answer: use a tree like [zwilias/elm-rosetree](https://package.elm-lang.org/packages/zwilias/elm-rosetree/latest/Tree):
+    My answer: use a tree like [zwilias/elm-rosetree](https://package.elm-lang.org/packages/zwilias/elm-rosetree/latest/Tree):
 
-```elm
-type alias Comments =
-    Maybe (Tree { message : String })
-```
+    ```elm
+    type alias Comments =
+        Maybe (Tree { message : String })
+    ```
 
-From the outside, recursive aliases seem like a solvable problem at the language level.
-Let's watch how elm handles them in the future.
+    From the outside, recursive aliases seem like a solvable problem at the language level.
+    Let's watch how elm handles them in the future.
