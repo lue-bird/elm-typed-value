@@ -1,5 +1,8 @@
 module Recursive exposing (Comment)
 
+{-| One limit of `Typed`. In this example: consider using a tree instead.
+-}
+
 import Typed exposing (Public, Tagged, Typed)
 
 
