@@ -4,6 +4,7 @@ module Typed exposing
     , Checked, isChecked
     , Public, val, val2
     , Internal, internalVal, internalVal2
+    , min, max
     , serialize, serializeChecked
     )
 
@@ -36,6 +37,11 @@ module Typed exposing
 ### internal
 
 @docs Internal, internalVal, internalVal2
+
+
+## compare
+
+@docs min, max
 
 
 ## serialize
@@ -86,7 +92,7 @@ Explaining `whoCanAccess`:
 the result will be too.
 
 -}
-type Typed whoCreated_ tag_ whoCanAccess_ value
+type Typed whoCreated tag whoCanAccess value
     = Typed value
 
 
@@ -156,7 +162,7 @@ type Tagged
 
 In effect, this means that you can only let "validated" data be of this type.
 
-Examaple `... Checked ... NaturalNumberTag Int`
+Example `... Checked ... NaturalNumberTag Int`
 
 → **✓** not every `Int` can be called a `NaturalNumber`, it must be checked!
 
@@ -167,15 +173,15 @@ type Checked
 
 {-| Create a new tagged value.
 
-  - can be `Checked` with [`isChecked`](Typed#isChecked)
+  - can be `Checked` with [`isChecked`](#isChecked)
   - becomes `Internal/Public` when annotated that way
 
 Modifying won't change the type.
 
 -}
 tag : value -> Typed Tagged tag_ whoCanAccess_ value
-tag value_ =
-    Typed value_
+tag value =
+    Typed value
 
 
 
@@ -186,7 +192,7 @@ tag value_ =
 -}
 val : Typed whoCreated_ tag_ Public value -> value
 val =
-    \(Typed value_) -> value_
+    \(Typed value) -> value
 
 
 {-| Use the values of 2 `Public` `Typed`s to return a result.
@@ -339,6 +345,48 @@ internalVal2 :
     -> resultValue
 internalVal2 binOp aTag aTyped bTag bTyped =
     binOp (internalVal aTag aTyped) (internalVal bTag bTyped)
+
+
+
+-- ## compare
+
+
+{-| The greater of 2 `Typed` `comparable` values.
+
+    Typed.max three four
+
+-}
+max :
+    Typed whoCreated tag Public comparable
+    -> Typed whoCreated tag Public comparable
+    -> Typed whoCreated tag Public comparable
+max a b =
+    if val2 (>) a b then
+        a
+
+    else
+        b
+
+
+{-| The smaller of 2 `Typed` `comparable` values.
+
+    Typed.max three four
+
+-}
+min :
+    Typed whoCreated tag Public comparable
+    -> Typed whoCreated tag Public comparable
+    -> Typed whoCreated tag Public comparable
+min a b =
+    if val2 (<) a b then
+        a
+
+    else
+        b
+
+
+
+-- ## serialize
 
 
 {-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Tagged` `Public` `Typed`s.
