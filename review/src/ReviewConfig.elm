@@ -11,27 +11,59 @@ when inside the directory containing this file.
 
 -}
 
-import Review.Rule as Rule exposing (Rule)
+import Docs.ReviewLinksAndSections
+import Docs.NoMissing
+import Docs.ReviewAtDocs
+import NoBooleanCase
+import NoDebug.Log
+import NoDebug.TodoOrToString
+import NoExposingEverything
+import NoForbiddenWords
+import NoImportingEverything
+import NoLeftPizza
+import NoMissingTypeAnnotation
+import NoMissingTypeExpose
+import NoSinglePatternCase
+import NoUnused.CustomTypeConstructorArgs
+import NoUnused.CustomTypeConstructors
 import NoUnused.Dependencies
+import NoUnused.Exports
+import NoUnused.Modules
+import NoUnused.Parameters
+import NoUnused.Patterns
 import NoUnused.Variables
 import OnlyAllSingleUseTypeVarsEndWith_
-import NoSinglePatternCase
-import NoLeftPizza
-import NoExposingEverything
-import NoImportingEverything
-import NoMissingTypeAnnotation
-import NoForbiddenWords
-import NoBooleanCase
-import NoPrematureLetComputation
+import Review.Rule as Rule exposing (Rule)
+import Simplify
 import NoRecordAliasConstructor
 import LinksPointToExistingPackageMembers
 
 
 config : List Rule
 config =
-    [ NoUnused.Dependencies.rule
-    , NoUnused.Variables.rule
+    [ Docs.ReviewLinksAndSections.rule
+    , Docs.ReviewAtDocs.rule
+    , Docs.NoMissing.rule
+        { document = Docs.NoMissing.onlyExposed
+        , from = Docs.NoMissing.exposedModules
+        }
+    , NoDebug.Log.rule
+    , NoDebug.TodoOrToString.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
+    , NoExposingEverything.rule
+    , NoForbiddenWords.rule [ "REPLACEME", "TODO", "todo" ]
+    , NoImportingEverything.rule [ "Nats" ]
+    , NoMissingTypeAnnotation.rule
+    , NoMissingTypeExpose.rule
+    , NoUnused.CustomTypeConstructors.rule []
+    , NoUnused.CustomTypeConstructorArgs.rule
+    , NoUnused.Dependencies.rule
+    , NoUnused.Exports.rule
+    , NoUnused.Modules.rule
+    , NoUnused.Parameters.rule
+    , NoUnused.Patterns.rule
+    , NoUnused.Variables.rule
+    , Simplify.rule Simplify.defaults
     , OnlyAllSingleUseTypeVarsEndWith_.rule
     , NoSinglePatternCase.rule
         (NoSinglePatternCase.fixInArgument
@@ -42,12 +74,8 @@ config =
                 )
         )
     , NoLeftPizza.rule NoLeftPizza.Any
-    , NoExposingEverything.rule
-    , NoImportingEverything.rule [ "Nats" ]
-    , NoMissingTypeAnnotation.rule
-    , NoForbiddenWords.rule [ "TODO", "todo", "REPLACEME" ]
     , NoBooleanCase.rule
-    , NoPrematureLetComputation.rule
+    , OnlyAllSingleUseTypeVarsEndWith_.rule
     , NoRecordAliasConstructor.rule
     , LinksPointToExistingPackageMembers.rule
     ]
