@@ -16,12 +16,12 @@ module Typed exposing
 ## who can create
 
 
-### tagged
+### tagged creation
 
 @docs Tagged, tag, map, map2
 
 
-### checked
+### checked creation
 
 @docs Checked, isChecked
 
@@ -29,12 +29,12 @@ module Typed exposing
 ## who can access
 
 
-### Public
+### public access
 
 @docs Public, val, val2
 
 
-### internal
+### internal access
 
 @docs Internal, internalVal, internalVal2
 
@@ -44,7 +44,7 @@ module Typed exposing
 @docs min, max
 
 
-## serialize
+## transform
 
 @docs serialize, serializeChecked
 
@@ -62,16 +62,14 @@ For `type`s with just 1 constructor with a value a `Typed` can be a good replace
 
 ### who can construct such a value
 
-  - [`Checked`](Typed#Checked)
-
-  - [`Tagged`](Typed#Tagged)
+  - [`Checked`](#Checked)
+  - [`Tagged`](#Tagged)
 
 
 ### who can access the value
 
-  - [`Public`](Typed#Public)
-
-  - [`Internal`](Typed#Internal)
+  - [`Public`](#Public)
+  - [`Internal`](#Internal)
 
 all promise additional type-safety.
 
@@ -80,20 +78,21 @@ all promise additional type-safety.
 
     map :
         (value -> mappedValue)
-        -> Typed whoCanCreate tag whoCanAccess value
-        -> Typed Tagged tag whoCanAccess
+        -> Typed whoCanCreate_ tag whoCanAccess value
+        -> Typed Tagged tag whoCanAccess mappedValue
 
-Is saying: `map` works on every `Typed` and returns a value that is just `Tagged`, but not `Checked`.
-Explaining `whoCanAccess`:
+Is saying:
 
-  - If the input is `Public`
-  - If the input is `Internal`,
+  - it works on every `Typed`
+  - it returns a value that is [`Tagged`](#Tagged), not [`Checked`](#Checked)
+  - if the input is [`Public`](#Public) or [`Internal`](#Internal), the result will be the same
 
-the result will be too.
+Note: Calling **`(==)` on `Typed`s causes elm to crash**.
+This prevents users from finding out the inner value without using `val` or `internalVal` functions.
 
 -}
-type Typed whoCreated tag whoCanAccess value
-    = Typed value
+type Typed whoCanCreate tag whoCanAccess value
+    = Typed (() -> value)
 
 
 {-| Only the ones with access to the `tag` constructor can access the `internalVal`.
@@ -109,22 +108,17 @@ type alias Special =
     Typed Tagged SpecialTag Internal SpecialValue
 ```
 
-  - inside a package (only with `Checked`)
+  - inside a package (only with [`Checked`](#Checked))
 
-```
-src
-  └ Special
-      └ Internal.elm
-          module Special.Internal exposing (SpecialTag(..))
-  └ SpecialPartA.elm
-      module SpecialPartA exposing (SpecialPartA)
-      import Special.Internal exposing (SpecialTag(..))
-  └ SpecialPartB.elm
-      module SpecialPartB exposing (SpecialPartB)
-      import Special.Internal exposing (SpecialTag(..))
-elm.json 'exposed-modules' :
-  [ "SpecialPartA", "SpecialPartB" ]
-```
+        Internal exposing (Tag(..))
+        A exposing (A)
+            import Internal exposing (Tag(..))
+        B exposing (B)
+            import Internal exposing (Tag(..))
+
+    ```json
+    'exposed-modules' : [ "A", "B" ]
+    ```
 
 This generally helps hiding implementation details.
 
@@ -171,31 +165,35 @@ type Checked
     = Checked Never
 
 
-{-| Create a new tagged value.
 
-  - can be `Checked` with [`isChecked`](#isChecked)
-  - becomes `Internal/Public` when annotated that way
+--
+
+
+{-| Create a new [`Tagged`](#Tagged) value.
+
+  - can be [`Checked`](#Checked) with [`isChecked`](#isChecked)
+  - becomes [`Internal`](#Internal)/[`Public`](#Public) when annotated that way
 
 Modifying won't change the type.
 
 -}
 tag : value -> Typed Tagged tag_ whoCanAccess_ value
 tag value =
-    Typed value
+    (\() -> value) |> Typed
 
 
 
 -- ## access
 
 
-{-| Read the value inside a `Public` `Typed`.
+{-| Read the value inside a [`Public`](#Public) `Typed`.
 -}
-val : Typed whoCreated_ tag_ Public value -> value
+val : Typed tag_ whoCanCreate_ Public value -> value
 val =
-    \(Typed value) -> value
+    \(Typed value) -> value ()
 
 
-{-| Use the values of 2 `Public` `Typed`s to return a result.
+{-| Use the values of 2 [`Public`](#Public) `Typed`s to return a result.
 
     type alias Prime =
         Typed Checked PrimeTag Public Int
@@ -216,17 +214,20 @@ Anywhere
 
     if val2 (<) onePrime otherPrime then
 
+Note: Calling **`(==)` on `Typed`s causes elm to crash**.
+This prevents users from finding out the inner value without using `val` or `internalVal` functions.
+
 -}
 val2 :
     (aValue -> bValue -> resultValue)
-    -> Typed whoCreatedA_ aTag_ Public aValue
-    -> Typed whoCreatedB_ bTag_ Public bValue
+    -> Typed aTag_ whoCanCreateA_ Public aValue
+    -> Typed bTag_ whoCanCreateB_ Public bValue
     -> resultValue
 val2 binOp aTyped bTyped =
     binOp (val aTyped) (val bTyped)
 
 
-{-| After calling `tag` or modifying a checked value, you get a `Tagged`. To tell the type that the result value is `Checked`, use `isChecked tag`.
+{-| After calling `tag` or modifying a checked value, you get a [`Tagged`](#Tagged). To tell the type that the result value is [`Checked`](#Checked), use `isChecked tag`.
 
 The type of `tag` might even change in that operation.
 
@@ -238,10 +239,10 @@ The type of `tag` might even change in that operation.
 -}
 isChecked :
     checkedTag
-    -> Typed whoCreated_ tag_ whoCanAccess_ value
-    -> Typed Checked checkedTag whoCanAccessChecked_ value
+    -> Typed whoCanCreate_ tag_ whoCanAccess value
+    -> Typed Checked checkedTag whoCanAccess value
 isChecked _ =
-    \(Typed value_) -> Typed value_
+    \(Typed value) -> value |> Typed
 
 
 
@@ -250,7 +251,7 @@ isChecked _ =
 
 {-| Alter the value inside.
 
-If the `Typed` was a `Checked`, it becomes a `Tagged`.
+If the `Typed` was a [`Checked`](#Checked), it becomes a [`Tagged`](#Tagged).
 
     type alias Meters =
         Typed Tagged MetersTag Public Int
@@ -262,10 +263,10 @@ If the `Typed` was a `Checked`, it becomes a `Tagged`.
 -}
 map :
     (value -> mappedValue)
-    -> Typed whoCreated_ tag whoCanAccess value
+    -> Typed whoCanCreate_ tag whoCanAccess value
     -> Typed Tagged tag whoCanAccess mappedValue
 map alter =
-    \(Typed value_) -> alter value_ |> Typed
+    \(Typed value) -> value >> alter |> Typed
 
 
 {-| Use the values of 2 `Typed`s to return a `Tagged` result.
@@ -292,10 +293,10 @@ In another module
 
 -}
 map2 :
-    (value -> value -> mappedValue)
-    -> Typed whoCanCreateA_ tag whoCanAccess value
-    -> Typed whoCanCreateB_ tag whoCanAccess value
-    -> Typed Tagged tag whoCanAccess mappedValue
+    (aValue -> bValue -> combinedValue)
+    -> Typed whoCanCreateA_ tag whoCanAccess aValue
+    -> Typed whoCanCreateB_ tag whoCanAccess bValue
+    -> Typed Tagged tag whoCanAccess combinedValue
 map2 binOp aTyped bTyped =
     let
         (Typed aValue) =
@@ -304,23 +305,36 @@ map2 binOp aTyped bTyped =
         (Typed bValue) =
             bTyped
     in
-    binOp aValue bValue |> Typed
+    (\() -> binOp (aValue ()) (bValue ())) |> Typed
 
 
-{-| If you have an `Internal`, its value isn't readable by users.
+{-| If you have an [`Internal`](#Internal) value, its value can't be read by users.
 
-If you have the `tag` however, you can access this data hidden from users.
+However, if you have the `tag` constructor, you can access this value.
+
+    type alias OptimizedList a =
+        Typed
+            Checked
+            OptimizedListTag
+            Internal
+            { list : List a, length : Int }
+
+    type OptimizedListTag
+        = OptimizedList
+
+    toList =
+        internalVal OptimizedList >> .list
 
 -}
 internalVal :
     tag
-    -> Typed whoCanCreate_ tag Internal value
+    -> Typed whoCanCreate_ tag whoCanAccess_ value
     -> value
 internalVal _ =
-    \(Typed value_) -> value_
+    \(Typed value) -> value ()
 
 
-{-| Use the values of 2 `Internal` `Typed`s to return a result.
+{-| Take 2 [`Internal`](#Internal) values with the same tag and combine them.
 
     type alias OptimizedList a =
         Typed
@@ -333,63 +347,74 @@ internalVal _ =
         = OptimizedList
 
     equal a b =
-        internalVal2 (==) OptimizedList a OptimizedList b
+        internalVal2 (==) OptimizedList a b
+
+Note: Calling **`(==)` on `Typed`s causes elm to crash**.
+This prevents users from finding out the inner value without using `val` or `internalVal` functions.
 
 -}
 internalVal2 :
-    (aValue -> bValue -> resultValue)
-    -> aTag
-    -> Typed whoCreatedA_ aTag Internal aValue
-    -> bTag
-    -> Typed whoCreatedB_ bTag Internal bValue
-    -> resultValue
-internalVal2 binOp aTag aTyped bTag bTyped =
-    binOp (internalVal aTag aTyped) (internalVal bTag bTyped)
+    (aValue -> bValue -> combinedValue)
+    -> tag
+    -> Typed whoCanCreateA_ tag whoCanAccessA_ aValue
+    -> Typed whoCanCreateB_ tag whoCanAccessB_ bValue
+    -> combinedValue
+internalVal2 binOp tag_ aTyped bTyped =
+    binOp (internalVal tag_ aTyped) (internalVal tag_ bTyped)
 
 
 
 -- ## compare
 
 
-{-| The greater of 2 `Typed` `comparable` values.
+{-| The greater of 2 `Typed` `comparable` [`Typed`](#Typed) values.
 
     Typed.max three four
+    --> four
 
 -}
 max :
-    Typed whoCreated tag Public comparable
-    -> Typed whoCreated tag Public comparable
-    -> Typed whoCreated tag Public comparable
+    Typed whoCanCreate tag whoCanAccess comparable
+    -> Typed whoCanCreate tag whoCanAccess comparable
+    -> Typed whoCanCreate tag whoCanAccess comparable
 max a b =
-    if val2 (>) a b then
-        a
+    let
+        (Typed aValue) =
+            a
 
-    else
-        b
+        (Typed bValue) =
+            b
+    in
+    (\() -> Basics.max (aValue ()) (bValue ())) |> Typed
 
 
-{-| The smaller of 2 `Typed` `comparable` values.
+{-| The smaller of 2 `Typed` `comparable` [`Typed`](#Typed) values.
 
-    Typed.max three four
+    Typed.min three four
+    --> three
 
 -}
 min :
-    Typed whoCreated tag Public comparable
-    -> Typed whoCreated tag Public comparable
-    -> Typed whoCreated tag Public comparable
+    Typed whoCanCreate tag whoCanAccess comparable
+    -> Typed whoCanCreate tag whoCanAccess comparable
+    -> Typed whoCanCreate tag whoCanAccess comparable
 min a b =
-    if val2 (<) a b then
-        a
+    let
+        (Typed aValue) =
+            a
 
-    else
-        b
+        (Typed bValue) =
+            b
+    in
+    (\() -> Basics.min (aValue ()) (bValue ())) |> Typed
 
 
 
 -- ## serialize
 
 
-{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Tagged` `Public` `Typed`s.
+{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/)
+to serialize [`Tagged`](#Tagged) [`Public`](#Public) [`Typed`](#Typed) values.
 -}
 serialize :
     Serialize.Codec error value
@@ -399,9 +424,9 @@ serialize serializeValue =
         |> Serialize.map tag val
 
 
-{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize `Checked`s.
+{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize [`Typed`](#Typed) values.
 
-We don't trust that the values we encode still have the same promises as our `Checked`s.
+We don't trust that the values we encode still have the same promises as our [`Checked`](#Checked) values.
 
 Choose a value it can convert from & to and serialize that.
 
@@ -456,4 +481,4 @@ serializeChecked tag_ checkValue toValue serializeValue =
     serializeValue
         |> Serialize.mapValid
             (checkValue >> Result.map (tag >> isChecked tag_))
-            (\(Typed value_) -> toValue value_)
+            (internalVal tag_ >> toValue)
