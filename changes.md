@@ -1,5 +1,16 @@
 # changelog
 
+## 6.0.0
+
+- now crashes when `Typed`s are checked with `(==)`
+- corrected `isChecked` argument annotation (`whoCanAccess` needs to be the same as of the result)
+- allowed calling `internalVal` on `Public` `Typed`s too
+- allowed calling `theSmaller` and `theGreater` with `Internal` too
+- allowed calling `map2` with different `value`s
+- renamed `theSmaller` to `min` and `theGreater` to `max`
+- changed `internalVal2 f aTag a bTag b` to `internalVal2 f tag a b`
+
+
 ### 5.1.0
 
 - added `theSmaller` and `theGreater`
@@ -33,7 +44,7 @@ Renamed `Val` module & type back to `Typed`
 
 ## 2.0.0
 
-Changed `Typed tag value { createdBy : whoCreated, canAccess : whoCanAccess }` to `Val whoCanCreate tag whoCanAccess value`.
+Changed `Typed tag value { createdBy : whoCanCreate, canAccess : whoCanAccess }` to `Val whoCanCreate tag whoCanAccess value`.
 
 - `Checked tag value` is now `Val Checked tag Public value`
 - `Tagged tag value` is now `Val Tagged tag Public value`
