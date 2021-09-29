@@ -30,4 +30,4 @@ Why call it `Tagged` & `Checked`
 ## Enough about my choices
 
 I'm very much open to change stuff in the future, **so share your thoughts**!
-If you want, post something in 'Disscussions'.
+If you want, post something in 'Discussions'.
