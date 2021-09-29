@@ -187,7 +187,7 @@ Then outside this module
 cakeForEvenNumbers : Even -> Cake
 
 cakeForEvenNumbers (tag 3)
---> compile-time error: isn't of type Typed ... Public ...
+--> compile-time error: isn't of type Typed Checked ...
 
 cakeForEvenNumbers
     (Even.two |> Even.multiply -5)
@@ -231,8 +231,8 @@ type alias Password goodOrUnchecked =
     Typed goodOrUnchecked PasswordTag Internal String
 
 type PasswordTag
-    -- don't expose the tag constructor
-    = Password
+    = -- don't expose the tag constructor
+      Password
 
 type alias GoodPassword =
     Password Checked
