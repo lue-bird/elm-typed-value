@@ -6,14 +6,13 @@ Similar to [prior art](#prior-art):
 
 A value is wrapped in the `type Typed` with a phantom `tag`.
 
-A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
+→ A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just one constructor with a value, a `Typed` can be a good replacement (→ [limits](#limits)).
+For `type`s with just one constructor with a value, a `Typed` can be a good replacement ([↑ limits](#limits)).
+
+You get rid of writing and calling different functions for those types:
 
 ```elm
-type Special
-    = Special Value
-
 extract (Special value) =
     value
 
@@ -21,11 +20,7 @@ map alter (Special value) =
     Special (alter value)
 
 --...
-```
 
-You get rid of writing and calling different functions for those types.
-
-```elm
 naturalNumber |> NaturalNumber.toInt
 height |> Meters.toFloat
 oneWeight |> Kilos.map ((+) (Kilos.toFloat otherWeight))
@@ -58,11 +53,11 @@ There are 2 kinds of `Typed`:
 
     Creating & updating `NaturalNumber`s will only be possible inside that module.
 
-  - `Tagged`, if you want to write
+  - `Tagged`, if you just want to attach a label to make 2 values different
 
     ```elm
-    -- constructor can be used anywhere
     type Cat =
+        -- constructor can be used anywhere
         Cat { name : String, mood : Mood }
     ```
 
@@ -86,7 +81,10 @@ import Typed
 
 ```elm
 type alias Pet tag specificProperties =
-    Typed Tagged tag Public
+    Typed
+        Tagged
+        tag 
+        Public
         { specificProperties | name : String, mood : Mood }
 
 type alias Cat =
@@ -162,8 +160,9 @@ module Even exposing
 type alias Even =
     Typed Checked EvenTag Public Int
 
--- don't expose this
-type EvenTag = Even
+type EvenTag
+    -- don't expose this constructor
+    = Even
 
 multiply : Int -> Even -> Even
 multiply int =
@@ -231,8 +230,8 @@ module Password exposing (UncheckedPassword, GoodPassword, isGood, toOnlyDots)
 type alias Password goodOrUnchecked =
     Typed goodOrUnchecked PasswordTag Internal String
 
--- don't expose the tag
 type PasswordTag
+    -- don't expose the tag constructor
     = Password
 
 type alias GoodPassword =
@@ -242,8 +241,7 @@ type alias UncheckedPassword =
     Password Tagged
 
 
-isGood :
-    UncheckedPassword -> Result String GoodPassword
+isGood : UncheckedPassword -> Result String GoodPassword
 isGood passwordToTest =
     let
         passwordString =
@@ -251,8 +249,10 @@ isGood passwordToTest =
     in
     if (passwordString |> String.length) < 10 then
         Err "Use at lest 10 letters & symbols."
+
     else if Set.member passwordString commonPasswords then
         Err "Choose a less common password."
+
     else
         Ok (passwordToTest |> isChecked Password)
 
@@ -266,26 +266,23 @@ commonPasswords =
 You can then decide that only a part of the information should be accessible.
 ```elm
 -- doesn't expose too much information.
-toOnlyDots : Password goodOrUnchecked -> String
+toOnlyDots : Password goodOrUnchecked_ -> String
 toOnlyDots =
     internalVal Password
         >> String.length
-        >> (\length ->
-                List.repeat length '·'
-                    |> String.fromList
-           )
+        >> (\length -> String.repeat length '·')
 ```
 In another module
 ```elm
 type alias Model =
-    { passwordTypedIntoRegister : UncheckedPassword
-        --cannot access the password the user typed
+    { -- cannot access the password the user typed
+      passwordTypedIntoRegister : UncheckedPassword
     , loggedIn : LoggedIn
     }
 
 type LoggedIn
-    = LoggedIn { userPassword : GoodPassword }
-        --there can't be a user with an insecure password
+    = -- there can't be a user with a bad password
+      LoggedIn { userPassword : GoodPassword }
     | NotLoggedIn
 
 
@@ -362,7 +359,10 @@ especially
 
     ```elm
     type alias Comment =
-        Typed Tagged CommentTag Public
+        Typed
+            Tagged
+            CommentTag
+            Public
             { message : String
             , responses : List Comment
             }
