@@ -7,6 +7,7 @@
 - allowed calling `internalVal` on `Public` `Typed`s too
 - allowed calling `theSmaller` and `theGreater` with `Internal` too
 - allowed calling `map2` with different `value`s
+- allowed `internalVal` and `internalVal2` to extract from `Public`
 - renamed `theSmaller` to `min` and `theGreater` to `max`
 - changed `internalVal2 f aTag a bTag b` to `internalVal2 f tag a b`
 
