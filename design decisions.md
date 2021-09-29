@@ -12,7 +12,7 @@ Why are the extract methods called `val`?
 
 - I wanted the extract method to be exposable
     - to make it short
-    - `value` was a too common name (e.g. Html.Attributes exposing (value))
+    - `value` was a too common name (e.g. `Html.Attributes exposing (value)`)
 
 Why call it `Internal` & `Public`?
 
