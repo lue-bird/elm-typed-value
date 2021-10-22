@@ -11,6 +11,7 @@ when inside the directory containing this file.
 
 -}
 
+import Review.Rule as Rule exposing (Rule)
 import Docs.ReviewLinksAndSections
 import Docs.NoMissing
 import Docs.ReviewAtDocs
@@ -33,10 +34,9 @@ import NoUnused.Parameters
 import NoUnused.Patterns
 import NoUnused.Variables
 import OnlyAllSingleUseTypeVarsEndWith_
-import Review.Rule as Rule exposing (Rule)
 import Simplify
 import NoRecordAliasConstructor
-import LinksPointToExistingPackageMembers
+import NoFunctionOutsideOfModules
 
 
 config : List Rule
@@ -77,5 +77,4 @@ config =
     , NoBooleanCase.rule
     , OnlyAllSingleUseTypeVarsEndWith_.rule
     , NoRecordAliasConstructor.rule
-    , LinksPointToExistingPackageMembers.rule
     ]
