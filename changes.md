@@ -1,5 +1,9 @@
 # changelog
 
+#### 6.0.1
+
+- now doesn't crash anymore when `Typed`s are checked with `==`
+
 ## 6.0.0
 
 - now crashes when `Typed`s are checked with `(==)`
