@@ -87,12 +87,14 @@ Is saying:
   - it returns a value that is [`Tagged`](#Tagged), not [`Checked`](#Checked)
   - if the input is [`Public`](#Public) or [`Internal`](#Internal), the result will be the same
 
-Note: Calling **`(==)` on `Typed`s causes elm to crash**.
-This prevents users from finding out the inner value without using `val` or `internalVal` functions.
+Note: Calling `==` is still possible on [`Internal`] `Typed`s to allow storing the value in the model.
+
+If you really want to prevents users from finding out the inner value without using `val` or `internalVal` functions,
+use a typed ... (() -> value) or something that'll crash elm when checked for equality.
 
 -}
 type Typed whoCanCreate tag whoCanAccess value
-    = Typed (() -> value)
+    = Typed value
 
 
 {-| Only the ones with access to the `tag` constructor can access the `internalVal`.
@@ -179,7 +181,7 @@ Modifying won't change the type.
 -}
 tag : value -> Typed Tagged tag_ whoCanAccess_ value
 tag value =
-    (\() -> value) |> Typed
+    value |> Typed
 
 
 
@@ -190,7 +192,7 @@ tag value =
 -}
 val : Typed tag_ whoCanCreate_ Public value -> value
 val =
-    \(Typed value) -> value ()
+    \(Typed value) -> value
 
 
 {-| Use the values of 2 [`Public`](#Public) `Typed`s to return a result.
@@ -266,7 +268,7 @@ map :
     -> Typed whoCanCreate_ tag whoCanAccess value
     -> Typed Tagged tag whoCanAccess mappedValue
 map alter =
-    \(Typed value) -> value >> alter |> Typed
+    \(Typed value) -> value |> alter |> Typed
 
 
 {-| Use the values of 2 `Typed`s to return a `Tagged` result.
@@ -305,7 +307,7 @@ map2 binOp aTyped bTyped =
         (Typed bValue) =
             bTyped
     in
-    (\() -> binOp (aValue ()) (bValue ())) |> Typed
+    binOp aValue bValue |> Typed
 
 
 {-| If you have an [`Internal`](#Internal) value, its value can't be read by users.
@@ -331,7 +333,7 @@ internalVal :
     -> Typed whoCanCreate_ tag whoCanAccess_ value
     -> value
 internalVal _ =
-    \(Typed value) -> value ()
+    \(Typed value) -> value
 
 
 {-| Take 2 [`Internal`](#Internal) values with the same tag and combine them.
@@ -341,16 +343,33 @@ internalVal _ =
             Checked
             OptimizedListTag
             Internal
-            { list : List a, length : Int }
+            { list : List (() -> a), length : Int }
 
     type OptimizedListTag
         = OptimizedList
 
-    equal a b =
-        internalVal2 (==) OptimizedList a b
+    equal =
+        internalVal2
+            (\a b ->
+                let
+                    equalLazyLists as bs =
+                        case ( as, bs ) of
+                            ( [], _ ) ->
+                                False
 
-Note: Calling **`(==)` on `Typed`s causes elm to crash**.
-This prevents users from finding out the inner value without using `val` or `internalVal` functions.
+                            ( _, [] ) ->
+                                False
+
+                            ( aHead :: aTail, bHead :: bTail ) ->
+                                aHead () == bTail ()
+                                    && equalLazyLists aTail bTail
+                in
+                a.length == b.length
+                    && equalLazyLists a.list b.list
+            )
+            OptimizedList
+
+Note: this is not all that optimized.
 
 -}
 internalVal2 :
@@ -385,7 +404,7 @@ max a b =
         (Typed bValue) =
             b
     in
-    (\() -> Basics.max (aValue ()) (bValue ())) |> Typed
+    Basics.max aValue bValue |> Typed
 
 
 {-| The smaller of 2 `Typed` `comparable` [`Typed`](#Typed) values.
@@ -406,7 +425,7 @@ min a b =
         (Typed bValue) =
             b
     in
-    (\() -> Basics.min (aValue ()) (bValue ())) |> Typed
+    Basics.min aValue bValue |> Typed
 
 
 
