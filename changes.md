@@ -1,3 +1,7 @@
+## plans for 7.0.0
+
+- rename `internalVal tag` to `valIn tag`
+
 # changelog
 
 #### 6.0.1
