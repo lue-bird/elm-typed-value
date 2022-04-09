@@ -25,18 +25,19 @@ type alias Dog =
 
 
 type CatTag
-    = Cat Never
+    = Cat
 
 
 type DogTag
-    = Dog Never
+    = Dog
 
 
 sit : Dog -> Dog
 sit =
-    Typed.map (\p -> { p | mood = Neutral })
+    Typed.map (\d -> { d | mood = Neutral })
 
 
 howdy : Cat
 howdy =
-    tag { name = "Howdy", mood = Happy, napsPerDay = 2.2 }
+    { name = "Howdy", mood = Happy, napsPerDay = 2.2 }
+        |> tag Cat

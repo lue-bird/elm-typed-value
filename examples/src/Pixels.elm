@@ -1,4 +1,4 @@
-module Pixels exposing (Pixels, ratio)
+module Pixels exposing (Pixels, PixelsTag(..), ratio)
 
 import Typed exposing (Public, Tagged, Typed, tag)
 
@@ -8,13 +8,8 @@ type alias Pixels =
 
 
 type PixelsTag
-    = Pixels Never
+    = Pixels
 
 
-
--- use a type annotation to say what the result is
-
-
-ratio : Int -> Int -> ( Pixels, Pixels )
 ratio w h =
-    ( tag w, tag h )
+    ( w |> tag Pixels, h |> tag Pixels )

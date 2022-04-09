@@ -1,11 +1,10 @@
 module Typed exposing
     ( Typed
-    , Tagged, tag, map, map2
+    , Tagged, tag
     , Checked, isChecked
-    , Public, val, val2
-    , Internal, internalVal, internalVal2
-    , min, max
-    , serialize, serializeChecked
+    , Public, untag
+    , Internal, internal
+    , map, and, mapToTyped
     )
 
 {-|
@@ -16,12 +15,12 @@ module Typed exposing
 ## who can create
 
 
-### tagged creation
+### tagging
 
-@docs Tagged, tag, map, map2
+@docs Tagged, tag
 
 
-### checked creation
+### checking
 
 @docs Checked, isChecked
 
@@ -31,26 +30,74 @@ module Typed exposing
 
 ### public access
 
-@docs Public, val, val2
+@docs Public, untag
 
 
 ### internal access
 
-@docs Internal, internalVal, internalVal2
-
-
-## compare
-
-@docs min, max
+@docs Internal, internal
 
 
 ## transform
 
-@docs serialize, serializeChecked
+@docs map, and, mapToTyped
+
+
+### [`serialize`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) examples
+
+    module ListOptimized exposing (serialize)
+
+    type ListOptimizedTag
+        = ListOptimized
+
+    type alias ListOptimized element =
+        Typed
+            Checked
+            ListOptimizedTag
+            Internal
+            { list : List element, length : Int }
+
+    fromList =
+        \list ->
+            { list = list
+            , length = length |> List.length
+            }
+                |> tag ListOptimized
+
+    serialize elementSerialize =
+        Serialize.list elementSerialize
+            |> Serialize.map
+                fromList
+                (\listOptimized ->
+                    listOptimized
+                        |> internal ListOptimized
+                        |> .list
+                )
+
+
+#### don't trust decoded values
+
+    module Nat exposing (fromInt, serialize)
+
+    import Serialize
+    import Typed exposing (Checked, Internal, Typed, internal, tag)
+
+    type NatTag
+        = Nat
+
+    fromInt =
+        \int ->
+            if int >= 0 then
+                Ok (tag Nat int)
+
+            else
+                Err "Int was negative, so it couldn't be decoded as a Nat"
+
+    serialize =
+        Serialize.int
+            |> Serialize.mapValid fromInt (internal Nat)
 
 -}
-
-import Serialize
 
 
 {-| A value is wrapped in the `type Typed` with a phantom `tag`.
@@ -71,46 +118,49 @@ For `type`s with just 1 constructor with a value a `Typed` can be a good replace
   - [`Public`](#Public)
   - [`Internal`](#Internal)
 
-all promise additional type-safety.
-
 
 ### reading types
 
     map :
-        (value -> mappedValue)
+        (value -> valueMapped)
         -> Typed whoCanCreate_ tag whoCanAccess value
-        -> Typed Tagged tag whoCanAccess mappedValue
+        -> Typed Tagged tag whoCanAccess valueMapped
 
 Is saying:
 
-  - it works on every `Typed`
-  - it returns a value that is [`Tagged`](#Tagged), not [`Checked`](#Checked)
+  - works on any `Typed`
+  - returns a value that is [`Tagged`](#Tagged), not [`Checked`](#Checked)
   - if the input is [`Public`](#Public) or [`Internal`](#Internal), the result will be the same
 
-Note: Calling `==` is still possible on [`Internal`] `Typed`s to allow storing the value in the model.
+Note: Calling `==` is still possible on [`Internal`](#Internal) `Typed`s to allow storing the value in the model, ...
 
-If you really want to prevents users from finding out the inner value without using `val` or `internalVal` functions,
-use a typed ... (() -> value) or something that'll crash elm when checked for equality.
+If you really need to prevent users from finding out the inner value without using `untag` or `internal`, try
+
+  - → trick elm to always give `False` when checked for equality:
+      - `Typed ... ( value, Unique )` with [`harrysarson/`: `Unique`](https://dark.elm.dmy.fr/packages/harrysarson/elm-hacky-unique/latest/)
+  - → cause elm to crash when checked for equality:
+      - `Typed ... (() -> value)`
+      - `Typed ... ( value, Json.Encode.Value )`
+      - `Typed ... ( value, Regex )`
+      - ...
 
 -}
 type Typed whoCanCreate tag whoCanAccess value
-    = Typed value
+    = Typed tag value
 
 
-{-| Only the ones with access to the `tag` constructor can access the `internalVal`.
+{-| Only devs with access to the tag constructor can access the [`internal`](#internal).
 
-Meaning that access can be limited to
+→ access can be limited to
 
   - inside a module
 
-```
-module Special exposing (Special)
+        module Special exposing (Special)
 
-type alias Special =
-    Typed Tagged SpecialTag Internal SpecialValue
-```
+        type alias Special =
+            Typed Tagged SpecialTag Internal SpecialValue
 
-  - inside a package (only with [`Checked`](#Checked))
+  - inside a package
 
         Internal exposing (Tag(..))
         A exposing (A)
@@ -122,15 +172,19 @@ type alias Special =
     'exposed-modules' : [ "A", "B" ]
     ```
 
-This generally helps hiding implementation details.
+This in combination with [`Checked`](#Checked) helps hiding the internal implementation just like a new `type`.
 
-    type alias OptimizedList a =
-        Typed Checked OptimizedListTag Internal (Implementation a)
+    import RecordWithoutConstructorFunction exposing (RecordWithoutConstructorFunction)
 
-    type alias Implementation a =
-        { list : List a, length : Int }
+    type alias ListOptimized element =
+        Typed Checked ListOptimizedTag Internal (ListOptimizedInternal element)
 
-    toList --...
+    type alias ListOptimizedInternal element =
+        RecordWithoutConstructorFunction
+            { list : List element, length : Int }
+
+[`RecordWithoutConstructorFunction`](https://dark.elm.dmy.fr/packages/lue-bird/elm-no-record-type-alias-constructor-function/latest/)
+tricks elm into not creating a `ListOptimizedInternal` constructor function.
 
 -}
 type Internal
@@ -160,7 +214,7 @@ In effect, this means that you can only let "validated" data be of this type.
 
 Example `... Checked ... NaturalNumberTag Int`
 
-→ **✓** not every `Int` can be called a `NaturalNumber`, it must be checked!
+→ **✓** not every `Int` can be called a `NumberNatural`, it must be checked!
 
 -}
 type Checked
@@ -179,325 +233,284 @@ type Checked
 Modifying won't change the type.
 
 -}
-tag : value -> Typed Tagged tag_ whoCanAccess_ value
-tag value =
-    value |> Typed
+tag : tag -> value -> Typed checked_ tag whoCanAccess_ value
+tag tag_ value =
+    value |> Typed tag_
 
 
 
 -- ## access
 
 
-{-| Read the value inside a [`Public`](#Public) `Typed`.
--}
-val : Typed tag_ whoCanCreate_ Public value -> value
-val =
-    \(Typed value) -> value
+{-| The [`untag`](#untag)ged value inside a [`Public`](#Public) `Typed`.
 
-
-{-| Use the values of 2 [`Public`](#Public) `Typed`s to return a result.
+    module Prime exposing (Prime, n3, n5)
 
     type alias Prime =
         Typed Checked PrimeTag Public Int
 
-    prime3 =
-        tag 3 |> isChecked Prime
+    n3 =
+        3 |> tag Prime
 
-    prime5 =
-        tag 5 |> isChecked Prime
+    n5 =
+        5 |> tag Prime
 
-Anywhere
+in another `module`
 
-    val2 (+) prime3 prime5
-    --> 8
+    import Tuple.Extra as Tuple
+    import Typed exposing (untag)
 
-    val2 Tuple.pair prime3 prime5
+    ( Prime.n3, Prime.n5 ) |> Tuple.map untag
     --> ( 3, 5 )
 
-    if val2 (<) onePrime otherPrime then
+    (Prime.n3 |> untag) + (Prime.n5 |> untag)
+    --> 8
 
-Note: Calling **`(==)` on `Typed`s causes elm to crash**.
-This prevents users from finding out the inner value without using `val` or `internalVal` functions.
+    (Prime.n3 |> untag) < (Prime.n5 |> untag)
+    --> True
 
 -}
-val2 :
-    (aValue -> bValue -> resultValue)
-    -> Typed aTag_ whoCanCreateA_ Public aValue
-    -> Typed bTag_ whoCanCreateB_ Public bValue
-    -> resultValue
-val2 binOp aTyped bTyped =
-    binOp (val aTyped) (val bTyped)
+untag : Typed tag_ whoCanCreate_ Public value -> value
+untag =
+    \(Typed _ value) -> value
 
 
-{-| After calling `tag` or modifying a checked value, you get a [`Tagged`](#Tagged). To tell the type that the result value is [`Checked`](#Checked), use `isChecked tag`.
+{-| [Map](#map)ping a [`Checked`](#Checked) value only results in a [`Tagged`](#Tagged) value.
 
-The type of `tag` might even change in that operation.
+To confirm that the result is [`Checked`](#Checked), use `isChecked tag`.
 
-    oddPlusOdd : Odd -> Odd -> Even
-    oddPlusOdd oddToAdd =
-        Typed.map2 (+) oddToAdd
-            >> isChecked Even
+The type of `tag` can change in that operation.
+
+    import Typed exposing (isChecked, mapToTyped)
+
+    oddAddOdd : Odd -> Odd -> Even
+    oddAddOdd oddToAdd =
+        \odd ->
+            (\o0 o1 -> o1 + o2)
+                |> Typed.mapEat odd
+                |> mapToTyped (Typed.mapEat oddToAdd)
+                |> isChecked Even
 
 -}
 isChecked :
-    checkedTag
+    tag
     -> Typed whoCanCreate_ tag_ whoCanAccess value
-    -> Typed Checked checkedTag whoCanAccess value
-isChecked _ =
-    \(Typed value) -> value |> Typed
+    -> Typed checked_ tag whoCanAccess value
+isChecked tagConfirmation =
+    \(Typed _ value) ->
+        value |> Typed tagConfirmation
 
 
+{-| Change the value.
 
--- ## no need to check
+If it was [`Checked`](#Checked) before, it becomes just [`Tagged`](#Tagged).
 
-
-{-| Alter the value inside.
-
-If the `Typed` was a [`Checked`](#Checked), it becomes a [`Tagged`](#Tagged).
+    import Typed exposing (Public, Tagged, Typed)
 
     type alias Meters =
         Typed Tagged MetersTag Public Int
 
-    go1km : Meters -> Meters
-    go1km =
-        Typed.map ((+) 1000)
+    add1km : Meters -> Meters
+    add1km =
+        Typed.map (\m -> m + 1000)
 
 -}
 map :
-    (value -> mappedValue)
+    (value -> valueMapped)
     -> Typed whoCanCreate_ tag whoCanAccess value
-    -> Typed Tagged tag whoCanAccess mappedValue
-map alter =
-    \(Typed value) -> value |> alter |> Typed
+    -> Typed Tagged tag whoCanAccess valueMapped
+map valueChange =
+    \(Typed tag_ value) ->
+        value |> valueChange |> Typed tag_
 
 
-{-| Use the values of 2 `Typed`s to return a `Tagged` result.
+{-| Use the value to return a `Typed` with the **same tag & access promise**.
 
-    type alias PrimeNumber =
-        Typed Checked PrimeNumberTag Public Int
+    module Cat exposing (feed)
 
-    prime3 : PrimeNumber
-    prime3 =
-        tag 3 |> isChecked PrimeNumber
+    import Typed exposing (mapToTyped)
 
-    prime5 =
-        tag 5 |> isChecked PrimeNumber
+    type alias Cat =
+        Typed
+            Checked
+            CatTag
+            Internal
+            { mood : Mood, foodReserves : Float }
 
-In another module
+    feed : Cat -> Cat
+    feed =
+        Typed.map
+            (\cat ->
+                { cat | foodReserves = cat.foodReserves + 10 }
+            )
+
+in another `module`
+
+    module Home exposing (feedIfUnhappy)
+
+    import Typed exposing (mapToTyped)
+    import Cat
+
+    feedIfUnhappy : Cat -> Cat
+    feedIfUnhappy =
+        cat
+            |> mapToTyped
+                (\cat ->
+                    case cat.mood of
+                        Unhappy ->
+                            cat |> Cat.feed
+
+                        Happy ->
+                            cat
+                )
+
+    🐱 |> meet 🐦 --> { 🐱, 🍗 }
+
+Feed multiple arguments with [`and`](#and)
+
+-}
+mapToTyped :
+    (value
+     -> Typed whoCanCreateMapped tag whoCanAccess valueMapped
+    )
+    -> Typed whoCanCreate_ tag whoCanAccess value
+    -> Typed whoCanCreateMapped tag whoCanAccess valueMapped
+mapToTyped valueMapToTyped =
+    \(Typed _ value) ->
+        value |> valueMapToTyped
+
+
+{-|
+
+> You can map, combine, ... even [`Internal`](#Internal) values
+> as long as a `Typed` with the **same tag & access promises** are returned in the end
+
+
+#### feed [`map`](#map)
+
+    module Prime exposing (Prime, n3, n5)
+
+    import Typed exposing (Checked, Public, Typed, isChecked, mapToTyped)
+
+    type alias Prime =
+        Typed Checked PrimeTag Public Int
+
+    n3 =
+        tag 3 |> isChecked Prime
+
+    n5 =
+        tag 5 |> isChecked Prime
+
+
+    module NonPrime exposing (NonPrime)
+
+    import Prime exposing (Prime)
 
     type alias NonPrime =
         Typed Checked NonPrimeTag Public Int
 
     fromMultiplyingPrimes : Prime -> Prime -> NonPrime
-    fromMultiplyingPrimes aPrime bPrime =
-        Typed.map2 (*) aPrime bPrime
+    fromMultiplyingPrimes primeA primeB =
+        (primeA |> Typed.and primeB)
+            |> Typed.map (\a b -> a * b)
             |> isChecked NonPrime
 
--}
-map2 :
-    (aValue -> bValue -> combinedValue)
-    -> Typed whoCanCreateA_ tag whoCanAccess aValue
-    -> Typed whoCanCreateB_ tag whoCanAccess bValue
-    -> Typed Tagged tag whoCanAccess combinedValue
-map2 binOp aTyped bTyped =
-    let
-        (Typed aValue) =
-            aTyped
 
-        (Typed bValue) =
-            bTyped
-    in
-    binOp aValue bValue |> Typed
+#### feed [`mapToTyped`](#mapToTyped)
+
+    min :
+        Typed whoCanCreate tag whoCanAccess Int
+        -> Typed whoCanCreate tag whoCanAccess Int
+        -> Typed whoCanCreate tag whoCanAccess Int
+    min =
+        \comparable0 comparable1 ->
+            comparable0
+                |> Typed.and comparable1
+                |> Typed.mapToTyped
+                    (\( c0, c1 ) ->
+                        if c0 < c1 then
+                            comparable1
+
+                        else
+                            comparable0
+                    )
+
+-}
+and :
+    Typed whoCanCreateFood_ tag whoCanAccess valueFoodLater
+    -> Typed whoCanCreate_ tag whoCanAccess valueFoodEarlier
+    -> Typed Tagged tag whoCanAccess ( valueFoodEarlier, valueFoodLater )
+and typedFoodLater =
+    \typedFoodEarlier ->
+        let
+            (Typed tag_ foodEarlier) =
+                typedFoodEarlier
+
+            (Typed _ foodLater) =
+                typedFoodLater
+        in
+        ( foodEarlier, foodLater ) |> tag tag_
 
 
 {-| If you have an [`Internal`](#Internal) value, its value can't be read by users.
 
-However, if you have the `tag` constructor, you can access this value.
+However, if you have access to the `tag` constructor, you can access this value.
 
-    type alias OptimizedList a =
+    import Typed exposing (Checked, Internal, Typed, internal)
+
+    type alias ListOptimized element =
         Typed
             Checked
-            OptimizedListTag
+            ListOptimizedTag
             Internal
-            { list : List a, length : Int }
+            { list : List (() -> element), length : Int }
 
-    type OptimizedListTag
-        = OptimizedList
+    type ListOptimizedTag
+        = ListOptimized
 
     toList =
-        internalVal OptimizedList >> .list
+        \listOptimized ->
+            listOptimized
+                |> internal ListOptimized
+                |> .list
+                |> List.map (\lazy -> lazy ())
 
--}
-internalVal :
-    tag
-    -> Typed whoCanCreate_ tag whoCanAccess_ value
-    -> value
-internalVal _ =
-    \(Typed value) -> value
-
-
-{-| Take 2 [`Internal`](#Internal) values with the same tag and combine them.
-
-    type alias OptimizedList a =
-        Typed
-            Checked
-            OptimizedListTag
-            Internal
-            { list : List (() -> a), length : Int }
-
-    type OptimizedListTag
-        = OptimizedList
+    type ListOptimizedTag
+        = ListOptimized
 
     equal =
-        internalVal2
-            (\a b ->
-                let
-                    equalLazyLists as bs =
-                        case ( as, bs ) of
-                            ( [], _ ) ->
-                                False
+        let
+            listLazyEqual =
+                \( listA, listB ) ->
+                    case ( listA, listB ) of
+                        ( [], _ ) ->
+                            False
 
-                            ( _, [] ) ->
-                                False
+                        ( _, [] ) ->
+                            False
 
-                            ( aHead :: aTail, bHead :: bTail ) ->
-                                aHead () == bTail ()
-                                    && equalLazyLists aTail bTail
-                in
-                a.length == b.length
-                    && equalLazyLists a.list b.list
-            )
-            OptimizedList
+                        ( aHead :: aTail, bHead :: bTail ) ->
+                            (aHead () == bTail ())
+                                && (( aTail, bTail ) |> listLazyEqual)
+        in
+        \( listOptimizedA, listOptimizedB ) ->
+            let
+                a =
+                    listOptimizedA |> internal ListOptimized
+
+                b =
+                    listOptimizedB |> internal ListOptimized
+            in
+            (a.length == b.length)
+                && (( a.list, b.list ) |> listLazyEqual)
 
 Note: this is not all that optimized.
 
 -}
-internalVal2 :
-    (aValue -> bValue -> combinedValue)
-    -> tag
-    -> Typed whoCanCreateA_ tag whoCanAccessA_ aValue
-    -> Typed whoCanCreateB_ tag whoCanAccessB_ bValue
-    -> combinedValue
-internalVal2 binOp tag_ aTyped bTyped =
-    binOp (internalVal tag_ aTyped) (internalVal tag_ bTyped)
-
-
-
--- ## compare
-
-
-{-| The greater of 2 `Typed` `comparable` [`Typed`](#Typed) values.
-
-    Typed.max three four
-    --> four
-
--}
-max :
-    Typed whoCanCreate tag whoCanAccess comparable
-    -> Typed whoCanCreate tag whoCanAccess comparable
-    -> Typed whoCanCreate tag whoCanAccess comparable
-max a b =
-    let
-        (Typed aValue) =
-            a
-
-        (Typed bValue) =
-            b
-    in
-    Basics.max aValue bValue |> Typed
-
-
-{-| The smaller of 2 `Typed` `comparable` [`Typed`](#Typed) values.
-
-    Typed.min three four
-    --> three
-
--}
-min :
-    Typed whoCanCreate tag whoCanAccess comparable
-    -> Typed whoCanCreate tag whoCanAccess comparable
-    -> Typed whoCanCreate tag whoCanAccess comparable
-min a b =
-    let
-        (Typed aValue) =
-            a
-
-        (Typed bValue) =
-            b
-    in
-    Basics.min aValue bValue |> Typed
-
-
-
--- ## serialize
-
-
-{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/)
-to serialize [`Tagged`](#Tagged) [`Public`](#Public) [`Typed`](#Typed) values.
--}
-serialize :
-    Serialize.Codec error value
-    -> Serialize.Codec error (Typed Tagged tag_ Public value)
-serialize serializeValue =
-    serializeValue
-        |> Serialize.map tag val
-
-
-{-| A [`Codec`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) to serialize [`Typed`](#Typed) values.
-
-We don't trust that the values we encode still have the same promises as our [`Checked`](#Checked) values.
-
-Choose a value it can convert from & to and serialize that.
-
-    module Nat exposing (serialize)
-
-    type NatTag
-        = Nat
-
-    serialize =
-        Serialize.int
-            |> Typed.serializeChecked Nat
-                (\int ->
-                    if int >= 0 then
-                        Ok int
-
-                    else
-                        Err "Int was negative, so it couldn't be decoded as a Nat"
-                )
-                identity
-
-    module EfficientList exposing (serialize)
-
-    type EfficientListTag
-        = EfficientList
-
-    type alias EfficientList =
-        Typed Checked EfficientListTag
-            Internal { list : List a, length : Int }
-
-    serialize =
-        Typed.serializeChecked EfficientList
-            (\list ->
-                { list = list
-                , length = List.length length
-                }
-                    |> Ok
-            )
-            .list
-            Serialize.list
-
--}
-serializeChecked :
+internal :
     tag
-    -> (value -> Result error checkedValue)
-    -> (checkedValue -> value)
-    -> Serialize.Codec error value
-    ->
-        Serialize.Codec
-            error
-            (Typed Checked tag whoCanAccess_ checkedValue)
-serializeChecked tag_ checkValue toValue serializeValue =
-    serializeValue
-        |> Serialize.mapValid
-            (checkValue >> Result.map (tag >> isChecked tag_))
-            (internalVal tag_ >> toValue)
+    -> Typed whoCanCreate_ tag whoCanAccess_ value
+    -> value
+internal _ =
+    \(Typed _ value) ->
+        value

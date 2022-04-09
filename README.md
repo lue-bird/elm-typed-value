@@ -8,35 +8,39 @@ A value is wrapped in the `type Typed` with a phantom `tag`.
 
 → A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just one constructor with a value, a `Typed` can be a good replacement ([↑ limits](#limits)).
+For `type`s with just one constructor with a value, a `Typed` can be a good replacement (↑ [limits](#limits)).
 
-You get rid of writing and calling different functions for those types:
+You get rid of
+writing
 
 ```elm
-extract (Special value) =
-    value
+extract =
+    \(Special value) ->
+        value
 
-map alter (Special value) =
-    Special (alter value)
+map alter =
+    \(Special value) ->
+        value |> alter |> Special
 
---...
+...
+```
 
-naturalNumber |> NaturalNumber.toInt
+and calling different functions for those types
+```elm
+naturalNumber |> NumberNatural.toInt
 height |> Meters.toFloat
-oneWeight |> Kilos.map ((+) (Kilos.toFloat otherWeight))
+
 if
     (oneHeight |> Meters.toFloat)
         > (otherHeight |> Meters.toFloat)
 then
 ```
 
-Do you really have to remind yourself every step that you're still operating on `Meters` or `Kilos`? With `Typed`:
-
+With `Typed`:
 ```elm
-val naturalNumber
-val height
-Typed.map2 (+) oneWeight otherWeight
-if val2 (>) oneHeight otherHeight then
+naturalNumber |> untag
+height |> untag
+if untag2 (>) oneHeight otherHeight then
 ```
 
 There are 2 kinds of `Typed`:
@@ -44,14 +48,14 @@ There are 2 kinds of `Typed`:
   - `Checked`, if the type should only contain "validated" values
 
     ```elm
-    module NaturalNumber exposing (NaturalNumber)
+    module NumberNatural exposing (NumberNatural)
 
-    type NaturalNumber =
+    type NumberNatural =
         -- nobody outside this module can call this constructor
-        NaturalNumber Int
+        NumberNatural Int
     ```
 
-    Creating & updating `NaturalNumber`s will only be possible inside that module.
+    Creating & updating `NumberNatural`s will only be possible inside that module.
 
   - `Tagged`, if you just want to attach a label to make 2 values different
 
@@ -69,17 +73,11 @@ Use `Public` to allow users to access the value; use `Internal` to hide it from 
 
 # examples
 
-```elm
-import Typed
-    exposing
-        ( Typed, Tagged, Public, Checked, Internal
-        , tag, isChecked, val, val2, internalVal
-        )
-```
-
-## `Tagged` + `Public`
+## `Tagged` `Public`
 
 ```elm
+import Typed exposing (Typed, Tagged, Public, tag)
+
 type alias Pet tag specificProperties =
     Typed
         Tagged
@@ -90,25 +88,24 @@ type alias Pet tag specificProperties =
 type alias Cat =
     Pet CatTag { napsPerDay : Float }
 
+type CatTag
+    = Cat
+
 type alias Dog =
     Pet DogTag { barksPerDay : Float }
 
-type CatTag
-    = Cat Never
-
 type DogTag
-    = Dog Never
+    = Dog
 
 sit : Dog -> Dog
 sit =
-    Typed.map (\p -> { p | mood = Neutral })
+    Typed.map (\d -> { d | mood = Neutral })
 ```
 
 ```elm
--- annotate to say it's a Cat
-howdy : Cat
 howdy =
-    tag { name = "Howdy", mood = Happy, napsPerDay = 2.2 }
+    { name = "Howdy", mood = Happy, napsPerDay = 2.2 }
+        |> tag Cat
 
 howdy |> sit -- error
 ```
@@ -116,85 +113,99 @@ howdy |> sit -- error
 Another example:
 
 ```elm
+module Pixels exposing (Pixels, PixelsTag(..), ratio)
+
+import Typed exposing (Typed, Tagged, Public, tag)
+
 type alias Pixels =
     Typed Tagged PixelsTag Public Int
 
 type PixelsTag
-    = Pixels Never
+    = Pixels
 
--- use a type annotation to say what the result is
-ratio : Int -> Int -> ( Pixels, Pixels )
 ratio w h =
-    ( tag w, tag h )
+    ( w |> tag Pixels, h |> tag Pixels )
 ```
 
 ```elm
-defaultWindowWidth : Pixels
-defaultWindowWidth =
-    Typed.map2 (+)
-        innerWindowWidth
-        (borderWidth |> Typed.map ((*) 2))
+module Window exposing (Window)
 
--- annotate to say it's in Pixels
-innerWindowWidth : Pixels
-innerWindowWidth =
-    tag 700
+import Typed exposing (Typed, Tagged, Public, tag)
 
--- annotate to say it's in Pixels
-borderWidth : Pixels
+innerWidth =
+    700 |> tag Pixels
+
 borderWidth =
-    tag 5
+    5 |> tag Pixels
 
-val defaultWindowWidth
+defaultWidth =
+    innerWidth
+        |> Typed.and borderWidth
+        |> Typed.map
+            (\( inner, border ) -> inner + border * 2)
+
+defaultWidth |> untag
 --> 710
 ```
 
-## `Checked` + `Public`
+## `Checked` `Public`
 
 ```elm
-module Even exposing
-    ( Even, zero, two
-    , multiply, add
-    )
+module Even exposing (Even, add, multiply, n0, n2)
+
+import Typed exposing (Checked, Public, Typed, isChecked, tag)
+
 
 type alias Even =
     Typed Checked EvenTag Public Int
 
-type EvenTag
+
+type
+    EvenTag
     -- don't expose this constructor
     = Even
 
+
 multiply : Int -> Even -> Even
-multiply int =
-    Typed.map ((*) int) >> isChecked Even
+multiply factor =
+    \even ->
+        even
+            |> Typed.map (\int -> int * factor)
+            |> isChecked Even
+
 
 add : Even -> Even -> Even
-add toAdd =
-    Typed.map2 (+) toAdd >> isChecked Even
+add toAddEven =
+    \even ->
+        (even |> Typed.and toAddEven)
+            |> Typed.map
+                (\( int, toAddInt ) -> int + toAddInt)
+            |> isChecked Even
 
-zero : Even
-zero =
-    tag 0 |> isChecked Even
 
-two : Even
-two =
-    tag 2 |> isChecked Even
+n0 : Even
+n0 =
+    0 |> tag Even
+
+
+n2 : Even
+n2 =
+    2 |> tag Even
 ```
 
 Then outside this module
 
 ```elm
-cakeForEvenNumbers : Even -> Cake
+cakeForEven : Even -> Cake
 
-cakeForEvenNumbers (tag 3)
---> compile-time error: isn't of type Typed Checked ...
+Even.n0 |> Typed.map (\n -> n + 1) |> cakeForEven
+--> compile-time error: is Tagged but expected Checked
 
-cakeForEvenNumbers
-    (Even.two |> Even.multiply -5)
+Even.n2 |> Even.multiply -5 |> cakeForEven
 --> Cake
 ```
 
-## `Checked` + `Internal`
+## `Checked` `Internal`
 
 A validated value that can't be directly accessed by a user.
 
@@ -203,29 +214,35 @@ A module that only exposes randomly generated unique `Id`s:
 ```elm
 module Id exposing (Id, random, toBytes, toString)
 
+import Typed exposing (Typed, Checked, Internal)
+
+
 import Random
 
 type alias Id =
-    Typed Checked IdTag Internal String
+    Typed Checked IdTag Internal (List Int)
 
 type IdTag = Id
 
 random : Random.Generator Id
 random =
-    Random.list 16 ({-...-})
-        |> Random.map String.fromList
-        |> Random.map (isChecked Id)
+    Random.list 2
+        (Random.int Random.minInt Random.maxInt)
+        |> Random.map (tag Id)
 
 -- the API stays the same even if the implementation changes
 toBytes --...
 toString --...
 ```
-No `Id` can be created outside this package!
+→ Outside of this module, the only way to create an `Id` is `Id.random`
 
-## Combined with `Tagged` + `Internal`
+## Combined with `Tagged` `Internal`
 
 ```elm
-module Password exposing (UncheckedPassword, GoodPassword, isGood, toOnlyDots)
+module Password exposing (PasswordUnchecked, PasswordGood, check, length, unchecked)
+
+import Typed exposing (Typed, Tagged, Checked, Internal, tag, internal)
+
 
 type alias Password goodOrUnchecked =
     Typed goodOrUnchecked PasswordTag Internal String
@@ -234,27 +251,32 @@ type PasswordTag
     = -- don't expose the tag constructor
       Password
 
-type alias GoodPassword =
+type alias PasswordGood =
     Password Checked
 
-type alias UncheckedPassword =
+type alias PasswordUnchecked =
     Password Tagged
 
+-- ! annotates the result as `Tagged` ↓
+unchecked : String -> PasswordUnchecked
+unchecked =
+    tag Password
 
-isGood : UncheckedPassword -> Result String GoodPassword
-isGood passwordToTest =
-    let
-        passwordString =
-            internalVal Password passwordToTest
-    in
-    if (passwordString |> String.length) < 10 then
-        Err "Use at lest 10 letters & symbols."
+check : PasswordUnchecked -> Result String PasswordGood
+check =
+    \passwordToTest ->
+        let
+            passwordString =
+                passwordToTest |> internal Password
+        in
+        if (passwordString |> String.length) < 10 then
+            Err "Use at lest 10 letters & symbols."
 
-    else if Set.member passwordString commonPasswords then
-        Err "Choose a less common password."
+        else if commonPasswords |> Set.member passwordString then
+            Err "Choose a less common password."
 
-    else
-        Ok (passwordToTest |> isChecked Password)
+        else
+            passwordToTest |> isChecked Password |> Ok
 
 commonPasswords =
     Set.fromList
@@ -266,119 +288,159 @@ commonPasswords =
 You can then decide that only a part of the information should be accessible.
 ```elm
 -- doesn't expose too much information.
-toOnlyDots : Password goodOrUnchecked_ -> String
-toOnlyDots =
-    internalVal Password
-        >> String.length
-        >> (\length -> String.repeat length '·')
+length : Password goodOrUnchecked_ -> Int
+length =
+    \password ->
+        password
+            |> internal Password
+            |> String.length
 ```
-In another module
+
 ```elm
+module Register exposing (Model, Event, ui, reactTo, modelInitial)
+
+import Password exposing (PasswordUnchecked)
+
 type alias Model =
-    { -- cannot access the password the user typed
-      passwordTypedIntoRegister : UncheckedPassword
+    { -- accessing user-typed password is impossible
+      passwordTyped : PasswordUnchecked
     , loggedIn : LoggedIn
     }
 
+modelInitial : Model
+modelInitial =
+    { passwordTyped =
+        "" |> Password.unchecked
+    , loggedIn = NotLoggedIn
+    }
+
 type LoggedIn
-    = -- there can't be a user with a bad password
-      LoggedIn { userPassword : GoodPassword }
+    = -- no user can have an unchecked password
+      LoggedIn { userPassword : PasswordGood }
     | NotLoggedIn
 
 
-type Msg
-    = PasswordTypedIntoRegisterChanged UncheckedPassword
-    | Register GoodPassword
+type Event
+    = PasswordEdited PasswordUnchecked
+    | PasswordConfirmed PasswordGood
 
-update msg model =
-    case msg of
-        PasswordTypedIntoRegisterChanged uncheckedPassword ->
-            { model
-              | passwordTypedIntoRegister = uncheckedPassword
-            }
-        
-        Register goodPassword ->
-            { model
-                | passwordTypedIntoRegister = tag ""
-                , loggedIn =
-                    LoggedIn { userPassword = goodPassword }
-            }
+reactTo : Event -> Model -> Model
+reactTo event =
+    \model ->
+        case event of
+            PasswordEdited uncheckedPassword ->
+                { model
+                    | passwordTyped = uncheckedPassword
+                }
+            
+            PasswordConfirmed passwordGood ->
+                { model
+                    | passwordTyped =
+                        "" |> Password.unchecked
+                    , loggedIn =
+                        LoggedIn { userPassword = passwordGood }
+                }
 
-view { passwordTypedIntoRegister } =
-    Html.div []
-        [ Html.div [] [ Html.text "register" ]
+ui =
+    \{ passwordTyped } ->
+        [ [ "register" |> Html.text ] |> Html.div []
         , Html.input
             [ onInput
-                --not accessible from now on
-                (tag >> PasswordTypedIntoRegisterChanged)
-            , Html.value (Password.toOnlyDots passwordTypedIntoRegister)
+                (\text ->
+                    text
+                        |> Password.unchecked
+                        -- not accessible from now on
+                        |> PasswordEdited
+                )
+            , String.repeat
+                (passwordTyped
+                    |> Password.length
+                )
+                "·"
+                |> Html.value
             ]
             []
-        , case Password.isGood passwordTypedIntoRegister of
-            Ok goodPassword ->
+        , case passwordTyped |> Password.check of
+            Ok passwordGood ->
                 Html.button
-                    [ onClick (Register goodPassword) ]
-                    [ Html.text "Create account" ]
+                    [ onClick (PasswordConfirmed passwordGood) ]
+                    [ "Create account" |> Html.text ]
                 
             Err message ->
-                text message
+                message |> Html.text
         ]
+            |> Html.div []
 ```
 ```elm
-leak (val passwordTypedIntoRegister)
--- or
-leak (val userPassword)
+passwordTyped |> untag |> leak
+userPassword |> untag |> leak
 ```
-→ compile-time error: Can't access the value inside a `Internal`.
+→ compile-time error: expected `Public` but found `Internal`
 
-## When not to use `Checked`
+## narrow type > `Checked`
 
-There might be a type that can guarantee these promises even if created by users.
+More often than not,
+there's already a type with the same promises
+even when created directly by users:
 
-Example `GoodPassword`:
+```diff
+type alias StringFilled =
+-    Typed Checked StringFilledTag Public String
++    Hand { head : Char, tail : String } Never Empty
 
-```elm
-type alias GoodPassword =
-    Arr (Min Nat10) Char
+type alias PasswordGoodInternal =
+-    String
++    Arr (Min Nat10) Char
 ```
-Used: [`elm-typesafe-array`](https://package.elm-lang.org/packages/lue-bird/elm-typesafe-array/latest/).
+Used here:
+
+  - [`typesafe-array`](https://package.elm-lang.org/packages/lue-bird/elm-typesafe-array/latest/)
+  - [`emptiness-typed`](https://dark.elm.dmy.fr/packages/lue-bird/elm-emptiness-typed/latest/)
+
 
 # prior art
 
-This package wouldn't exist without a lot of inspiration from those packages.
-- [Punie/elm-id](https://package.elm-lang.org/packages/Punie/elm-id/latest/)
+This package wouldn't exist without inspiration:
+
+  - [`Punie/elm-id`](https://package.elm-lang.org/packages/Punie/elm-id/latest/)
 
 especially
-- [joneshf/elm-tagged](https://package.elm-lang.org/packages/joneshf/elm-tagged/latest/)
-- [IzumiSy/elm-typed](https://package.elm-lang.org/packages/IzumiSy/elm-typed/latest/)
+  - [`joneshf/elm-tagged`](https://package.elm-lang.org/packages/joneshf/elm-tagged/latest/)
+  - [`IzumiSy/elm-typed`](https://package.elm-lang.org/packages/IzumiSy/elm-typed/latest/)
+
 
 # limits
 
-1. If the internal value changes that's considered a breaking change.
-2. `Typed` sadly can't replace `type`s when defining recursive types:
+## changing a `Checked` `Internal` value is a major change
 
-    ```elm
-    type alias Comment =
-        Typed
-            Tagged
-            CommentTag
-            Public
-            { message : String
-            , responses : List Comment
-            }
-    ```
-    elm:
-    > This type alias is recursive, forming an infinite type.
+For many this might be a deal-breaker.
 
-    [recursive alias hint](https://github.com/elm/compiler/blob/master/hints/recursive-alias.md):
-    > Somewhere in that cycle, you need to define an actual type to end the infinite expansion.
+Be explicit and choose a `type` for parts of information that could be added or removed in the future.
 
-    My answer: use a tree like [zwilias/elm-rosetree](https://package.elm-lang.org/packages/zwilias/elm-rosetree/latest/Tree):
+## can't be defined recursively
 
-    ```elm
-    type alias Comments =
-        Maybe (Tree { message : String })
-    ```
+```elm
+type alias Comment =
+    Typed
+        Tagged
+        CommentTag
+        Public
+        { message : String
+        , responses : List Comment
+        }
+```
+elm:
+> This type alias is recursive, forming an infinite type.
 
-    From the outside, recursive aliases seem like a solvable problem at the language level.
-    Let's watch how elm handles them in the future.
+[recursive alias hint](https://github.com/elm/compiler/blob/master/hints/recursive-alias.md):
+> Somewhere in that cycle, you need to define an actual type to end the infinite expansion.
+
+In this instance: try tree structures like [`zwilias/elm-rosetree`](https://package.elm-lang.org/packages/zwilias/elm-rosetree/latest/Tree):
+
+```elm
+type alias Comments =
+    Maybe (Tree { message : String })
+```
+
+From the outside, recursive aliases seem like a problem solvable at the language level.
+Let's watch how elm handles them in the future.

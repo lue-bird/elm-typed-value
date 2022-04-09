@@ -1,8 +1,19 @@
-## plans for 7.0.0
-
-- rename `internalVal tag` to `valIn tag`
-
 # changelog
+
+## 7.0.0
+
+- removed `map2 (\a b -> ...) a b` in favor of `a |> and b |> map (\( a, b ) -> ...)`
+- removed `val2`
+- removed `internalVal2`
+- removed `serialize`
+- removed `serializeChecked`
+- removed `min`
+- removed `max`
+- changed `tag value` to `tag tag value`
+- renamed `val` to `untag`
+- renamed `internalVal` to `internal`
+- added `mapToTyped`
+- added `and`
 
 #### 6.0.1
 
@@ -18,7 +29,6 @@
 - allowed `internalVal` and `internalVal2` to extract from `Public`
 - renamed `theSmaller` to `min` and `theGreater` to `max`
 - changed `internalVal2 f aTag a bTag b` to `internalVal2 f tag a b`
-
 
 ### 5.1.0
 
@@ -44,11 +54,12 @@
 
 - added `internalVal2`
 - renamed `internal` to `internalVal`
-- changed `map2` type to `value -> value -> mappedValue` like in `map`
+- changed `map2` type to `value -> value -> valueMapped` like in `map`
 
 ## 3.0.0
 
 Renamed `Val` module & type back to `Typed`
+
 - changed `map2` type to `tag -> tag -> tag` & `value -> value -> value`
 
 ## 2.0.0
@@ -65,4 +76,3 @@ Changed `Typed tag value { createdBy : whoCanCreate, canAccess : whoCanAccess }`
 - renamed `hiddenValueIn` to `Val.internal`
 - `map` now returns a `Tagged` with the same `tag`
 - added `serialize` & `serializeChecked`
-

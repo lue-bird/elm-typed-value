@@ -1,4 +1,4 @@
-module Recursive exposing (Comment)
+module Recursive exposing (Comment, CommentTag(..))
 
 {-| One limit of `Typed`. In this example: consider using a tree instead.
 -}
@@ -17,4 +17,4 @@ type alias Comment =
 
 
 type CommentTag
-    = CommentTag Never
+    = Comment

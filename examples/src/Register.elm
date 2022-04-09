@@ -1,74 +1,128 @@
-module Register exposing (main)
+module Register exposing (Event, Model, main, modelInitial, reactTo, ui)
 
 import Browser
-import Html exposing (text)
-import Html.Attributes exposing (value)
+import Element as Ui exposing (rgb)
+import Element.Background as Background
+import Element.Font as Font
+import Element.Input as UIn
+import Html exposing (Html)
+import Html.Attributes as Html
 import Html.Events exposing (onClick, onInput)
-import Password exposing (GoodPassword, UncheckedPassword)
-import Typed exposing (tag)
-
-
-main : Program () Model Msg
-main =
-    Browser.sandbox
-        { init = initModel
-        , view = view
-        , update = update
-        }
+import Password exposing (PasswordGood, PasswordUnchecked)
 
 
 type alias Model =
-    { passwordTypedIntoRegister : UncheckedPassword
-    , loggedIn : LoggedIn
+    { loggedIn : LoggedIn
+    }
+
+
+main : Program () Model Event
+main =
+    Browser.sandbox
+        { init = modelInitial
+        , view = uiHtml
+        , update = reactTo
+        }
+
+
+modelInitial : Model
+modelInitial =
+    { loggedIn =
+        NotLoggedIn
+            { passwordTyped =
+                "" |> Password.unchecked
+            }
     }
 
 
 type LoggedIn
-    = LoggedIn { userPassword : GoodPassword }
+    = LoggedIn
+        { -- no user can have an unchecked password
+          userPassword : PasswordGood
+        }
     | NotLoggedIn
+        { -- accessing user-typed password is impossible
+          passwordTyped : PasswordUnchecked
+        }
 
 
-initModel =
-    { passwordTypedIntoRegister = tag ""
-    , loggedIn = NotLoggedIn
-    }
+type Event
+    = PasswordEdited PasswordUnchecked
+    | PasswordConfirmed PasswordGood
 
 
-type Msg
-    = PasswordTypedIntoRegisterChanged UncheckedPassword
-    | Register GoodPassword
+reactTo : Event -> Model -> Model
+reactTo event =
+    \model ->
+        case event of
+            PasswordEdited uncheckedPassword ->
+                { model
+                    | loggedIn =
+                        NotLoggedIn
+                            { passwordTyped = uncheckedPassword }
+                }
+
+            PasswordConfirmed passwordGood ->
+                { model
+                    | loggedIn =
+                        LoggedIn { userPassword = passwordGood }
+                }
 
 
-update msg model =
-    case msg of
-        PasswordTypedIntoRegisterChanged uncheckedPassword ->
-            { model
-                | passwordTypedIntoRegister = uncheckedPassword
-            }
-
-        Register goodPassword ->
-            { model
-                | passwordTypedIntoRegister = tag ""
-                , loggedIn =
-                    LoggedIn { userPassword = goodPassword }
-            }
+uiHtml : Model -> Html Event
+uiHtml =
+    \model ->
+        ui model
+            |> Ui.layout
+                [ Background.color (rgb 0 0 0)
+                , Font.color (rgb 1 1 1)
+                ]
 
 
-view { passwordTypedIntoRegister } =
-    Html.div []
-        [ Html.div [] [ text "register" ]
-        , Html.input
-            [ onInput (tag >> PasswordTypedIntoRegisterChanged)
-            , value (Password.toOnlyDots passwordTypedIntoRegister)
-            ]
-            []
-        , case Password.isGood passwordTypedIntoRegister of
-            Ok goodPassword ->
-                Html.button
-                    [ onClick (Register goodPassword)
-                    ]
-                    [ text "Create account" ]
+ui : Model -> Ui.Element Event
+ui =
+    \{ loggedIn } ->
+        case loggedIn of
+            LoggedIn _ ->
+                "registered"
+                    |> Ui.text
+                    |> Ui.el [ Ui.centerX ]
 
-            Err message ->
-                text message
-        ]
+            NotLoggedIn { passwordTyped } ->
+                [ "register" |> Ui.text
+                , [ UIn.text []
+                        { onChange =
+                            \text ->
+                                text
+                                    |> Password.unchecked
+                                    -- not accessible from now on
+                                    |> PasswordEdited
+                        , text =
+                            String.repeat
+                                (passwordTyped
+                                    |> Password.length
+                                )
+                                "*"
+                        , placeholder = Nothing
+                        , label = "register" |> UIn.labelHidden
+                        }
+                  , case passwordTyped |> Password.check of
+                        Ok passwordGood ->
+                            UIn.button []
+                                { onPress = PasswordConfirmed passwordGood |> Just
+                                , label = "password |> confirm" |> Ui.text
+                                }
+
+                        Err message ->
+                            message |> Ui.text
+                  ]
+                    |> Ui.row
+                        [ Ui.centerX
+                        , Ui.spacing 5
+                        ]
+                ]
+                    |> Ui.column
+                        [ Ui.spacing 12
+                        , Ui.centerY
+                        , Ui.centerX
+                        ]

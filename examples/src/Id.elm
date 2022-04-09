@@ -1,11 +1,11 @@
 module Id exposing (Id, random, toString)
 
 import Random
-import Typed exposing (Checked, Internal, Typed, internalVal, isChecked, tag)
+import Typed exposing (Checked, Internal, Typed, internal, isChecked, tag)
 
 
 type alias Id =
-    Typed Checked IdTag Internal String
+    Typed Checked IdTag Internal (List Int)
 
 
 type IdTag
@@ -14,14 +14,15 @@ type IdTag
 
 random : Random.Generator Id
 random =
-    Random.list 16
-        (Random.int (Char.toCode 'A') (Char.toCode 'z')
-            |> Random.map Char.fromCode
-        )
-        |> Random.map String.fromList
-        |> Random.map (tag >> isChecked Id)
+    Random.list 2
+        (Random.int Random.minInt Random.maxInt)
+        |> Random.map (tag Id)
 
 
 toString : Id -> String
 toString =
-    internalVal Id
+    \id ->
+        id
+            |> internal Id
+            |> List.map String.fromInt
+            |> String.join ")"
