@@ -6,9 +6,12 @@
 ## you
 
 - share your thoughts (read "design decisions.md")
-- add useful operations like `bind` or `extend`
+- add useful operations
 
-If you have questions, don't hesitate to ask (e.g. in slack (@lue lue.the.bird@gmail.com) or by starting a discussion in github)!
+Questions?
+- matrix @lue-bird
+- slack @lue
+- github discussion
 
 ### commits
 look like this:
