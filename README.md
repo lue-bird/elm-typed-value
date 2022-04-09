@@ -10,68 +10,68 @@ A value is wrapped in the `type Typed` with a phantom `tag`.
 
 For `type`s with just one constructor with a value, a `Typed` can be a good replacement (↑ [limits](#limits)).
 
-You get rid of
-writing
+→ save boilerplate
 
 ```elm
 extract =
-    \(Special value) ->
+    \(Meters value) ->
         value
 
 map alter =
-    \(Special value) ->
-        value |> alter |> Special
+    \(Meters value) ->
+        value |> alter |> Meters
 
-...
-```
+...many more
 
-and calling different functions for those types
-```elm
+
 naturalNumber |> NumberNatural.toInt
+
+height =
+    3.2 |> Meters.fromFloat
 height |> Meters.toFloat
 
-if
-    (oneHeight |> Meters.toFloat)
-        > (otherHeight |> Meters.toFloat)
-then
+(oneHeight |> Meters.toFloat)
+    + (otherHeight |> Meters.toFloat)
+    |> Meters.fromFloat
 ```
 
-With `Typed`:
+with `Typed`
+
 ```elm
 naturalNumber |> untag
+
+height =
+    3.2 |> tag Meters
 height |> untag
-if untag2 (>) oneHeight otherHeight then
+
+oneHeight
+    |> Typed.and otherHeight
+    |> Typed.map (\h0 h1 -> h0 + h1)
 ```
 
-There are 2 kinds of `Typed`:
+# Kinds of `Typed`
 
-  - `Checked`, if the type should only contain "validated" values
-
+  - `Checked` → only "validated" values
     ```elm
     module NumberNatural exposing (NumberNatural)
 
-    type NumberNatural =
+    type NumberNatural
         -- nobody outside this module can call this constructor
-        NumberNatural Int
+        = NumberNatural Int
     ```
+    creating & altering `NumberNatural`s will only be possible inside that `module`
 
-    Creating & updating `NumberNatural`s will only be possible inside that module.
-
-  - `Tagged`, if you just want to attach a label to make 2 values different
-
+  - `Tagged` → attach a label
     ```elm
     type Cat =
         -- constructor can be used anywhere
         Cat { name : String, mood : Mood }
     ```
+    Users can create **& alter** new `Cat`s everywhere
 
-    Users can create **& update** new `Cat`s everywhere
+  - `Public` → allow users to access (→ `untag`) the value
 
-
-Use `Public` to allow users to access the value; use `Internal` to hide it from users.
-
-
-# examples
+  - `Internal` → hide the value from users
 
 ## `Tagged` `Public`
 
