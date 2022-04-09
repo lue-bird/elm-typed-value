@@ -1,5 +1,9 @@
 # changelog
 
+#### 7.0.1
+
+- updated readme examples
+
 ## 7.0.0
 
 - removed `map2 (\a b -> ...) a b` in favor of `a |> and b |> map (\( a, b ) -> ...)`
