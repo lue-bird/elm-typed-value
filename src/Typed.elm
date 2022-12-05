@@ -293,9 +293,9 @@ The type of `tag` can change in that operation.
 
 -}
 isChecked :
-    tag
+    tagChecked
     -> Typed whoCanCreate_ tag_ whoCanAccess value
-    -> Typed checked_ tag whoCanAccess value
+    -> Typed checked_ tagChecked whoCanAccess value
 isChecked tagConfirmation =
     \(Typed _ value) ->
         value |> Typed tagConfirmation
