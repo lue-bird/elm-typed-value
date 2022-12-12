@@ -1,5 +1,13 @@
 # changelog
 
+## 8.0.0
+
+- `isChecked` type correct
+- `andWrap` add
+- `mapWrap` add
+- `mapUnwrap` add
+- `wrapIsChecked` add
+
 #### 7.0.1
 
 - updated readme examples

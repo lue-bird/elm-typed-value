@@ -1,17 +1,14 @@
 # elm-typed-value
 
-> better 1-constructor types
+> type with 1 variant → save boilerplate safely
 
-Similar to [prior art](#prior-art):
+Wrap your thing in a [`Typed`](Typed#Typed) with a `tag` (↑ [prior art](#prior-art)).
 
-A value is wrapped in the `type Typed` with a phantom `tag`.
+→ A `Typed ... Meters ... Float` isn't accepted as `Typed ... Kilos ... Float` anymore!
 
-→ A `Typed ... Meters ... Float` can't be called a `Typed ... Kilos ... Float` anymore!
+For `type`s with just one variant with an attached thing, `Typed` can be a convenient replacement (↑ [limits](#limits))
 
-For `type`s with just one constructor with a value, a `Typed` can be a good replacement (↑ [limits](#limits)).
-
-→ save boilerplate
-
+with `type`
 ```elm
 extract =
     \(Meters value) ->
@@ -20,14 +17,12 @@ extract =
 map alter =
     \(Meters value) ->
         value |> alter |> Meters
-
-...many more
-
+```
+and other helpers like map2 etc. are all covered by [`Typed`](Typed#Typed)
+```elm
+3.2 |> Meters.fromFloat
 
 naturalNumber |> NumberNatural.toInt
-
-height =
-    3.2 |> Meters.fromFloat
 height |> Meters.toFloat
 
 (oneHeight |> Meters.toFloat)
@@ -38,20 +33,19 @@ height |> Meters.toFloat
 with `Typed`
 
 ```elm
-naturalNumber |> untag
+3.2 |> tag Meters
 
-height =
-    3.2 |> tag Meters
+naturalNumber |> untag
 height |> untag
 
 oneHeight
     |> Typed.and otherHeight
-    |> Typed.map (\h0 h1 -> h0 + h1)
+    |> Typed.map (\( h0, h1 ) -> h0 + h1)
 ```
 
-# Kinds of `Typed`
+# Kinds of [`Typed`](Typed#Typed)
 
-  - `Checked` → only "validated" values
+  - [`Checked`](Typed#Checked) → only "validated" values
     ```elm
     module NumberNatural exposing (NumberNatural)
 
@@ -61,7 +55,7 @@ oneHeight
     ```
     creating & altering `NumberNatural`s will only be possible inside that `module`
 
-  - `Tagged` → attach a label
+  - [`Tagged`](Typed#Tagged) → attach a label
     ```elm
     type Cat =
         -- constructor can be used anywhere
@@ -69,11 +63,11 @@ oneHeight
     ```
     Users can create **& alter** new `Cat`s everywhere
 
-  - `Public` → allow users to access (→ `untag`) the value
+  - [`Public`](Typed#Public) → allow users to access (→ [`untag`](Typed#untag)) the value
 
-  - `Internal` → hide the value from users
+  - [`Internal`](Typed#Internal) → hide the value from users
 
-## `Tagged` `Public`
+## [`Tagged`](Typed#Tagged) [`Public`](Typed#Public)
 
 ```elm
 import Typed exposing (Typed, Tagged, Public, tag)
@@ -123,46 +117,41 @@ type alias Pixels =
 type PixelsTag
     = Pixels
 
-ratio w h =
-    ( w |> tag Pixels, h |> tag Pixels )
-```
+-- in another module using Pixels
 
-```elm
-module Window exposing (Window)
-
-import Typed exposing (Typed, Tagged, Public, tag)
-
+innerWidth : Pixels
 innerWidth =
     700 |> tag Pixels
 
+borderWidth : Pixels
 borderWidth =
     5 |> tag Pixels
 
+defaultWidth : Pixels
 defaultWidth =
     innerWidth
         |> Typed.and borderWidth
         |> Typed.map
             (\( inner, border ) -> inner + border * 2)
 
-defaultWidth |> untag
+defaultWidth |> Typed.untag
 --> 710
 ```
 
-## `Checked` `Public`
+## [`Checked`](Typed#Checked) [`Public`](Typed#Public)
 
 ```elm
 module Even exposing (Even, add, multiply, n0, n2)
 
-import Typed exposing (Checked, Public, Typed, isChecked, tag)
+import Typed exposing (Typed, Checked, Public, tag)
 
 
 type alias Even =
     Typed Checked EvenTag Public Int
 
 
-type
-    EvenTag
-    -- don't expose this constructor
+-- don't expose(..) its variant
+type EvenTag
     = Even
 
 
@@ -171,16 +160,17 @@ multiply factor =
     \even ->
         even
             |> Typed.map (\int -> int * factor)
-            |> isChecked Even
+            |> Typed.isChecked Even
 
 
 add : Even -> Even -> Even
 add toAddEven =
     \even ->
-        (even |> Typed.and toAddEven)
+        even
+            |> Typed.and toAddEven
             |> Typed.map
                 (\( int, toAddInt ) -> int + toAddInt)
-            |> isChecked Even
+            |> Typed.isChecked Even
 
 
 n0 : Even
@@ -191,21 +181,21 @@ n0 =
 n2 : Even
 n2 =
     2 |> tag Even
+
+-- in another module using Even
+
+cakeForEven : Even -> { cake : () }
+cakeForEven _ =
+    { cake = () }
+
+n0 |> Typed.map (\n -> n + 1) |> cakeForEven
+--→ compile-time error: is Tagged but expected Checked
+
+n2 |> multiply -5 |> cakeForEven
+--> { cake = () }
 ```
 
-Then outside this module
-
-```elm
-cakeForEven : Even -> Cake
-
-Even.n0 |> Typed.map (\n -> n + 1) |> cakeForEven
---> compile-time error: is Tagged but expected Checked
-
-Even.n2 |> Even.multiply -5 |> cakeForEven
---> Cake
-```
-
-## `Checked` `Internal`
+## [`Checked`](Typed#Checked) [`Internal`](Typed#Internal)
 
 A validated value that can't be directly accessed by a user.
 
@@ -214,7 +204,7 @@ A module that only exposes randomly generated unique `Id`s:
 ```elm
 module Id exposing (Id, random, toBytes, toString)
 
-import Typed exposing (Typed, Checked, Internal)
+import Typed exposing (Typed, Checked, Internal, tag)
 
 
 import Random
@@ -236,7 +226,7 @@ toString --...
 ```
 → Outside of this module, the only way to create an `Id` is `Id.random`
 
-## Combined with `Tagged` `Internal`
+## Combined with [`Tagged`](Typed#Tagged) [`Internal`](Typed#Internal)
 
 ```elm
 module Password exposing (PasswordUnchecked, PasswordGood, check, length, unchecked)
@@ -276,7 +266,7 @@ check =
             Err "Choose a less common password."
 
         else
-            passwordToTest |> isChecked Password |> Ok
+            passwordToTest |> Typed.isChecked Password |> Ok
 
 commonPasswords =
     Set.fromList
@@ -377,7 +367,7 @@ userPassword |> untag |> leak
 ```
 → compile-time error: expected `Public` but found `Internal`
 
-## narrow type > `Checked`
+## narrow type > > [`Checked`](Typed#Checked)
 
 More often than not,
 there's already a type with the same promises
@@ -411,7 +401,7 @@ especially
 
 # limits
 
-## changing a `Checked` `Internal` value is a major change
+## changing a [`Checked`](Typed#Checked) [`Internal`](Typed#Internal) value is a major change
 
 For many this might be a deal-breaker.
 

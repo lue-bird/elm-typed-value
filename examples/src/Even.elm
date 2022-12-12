@@ -1,6 +1,6 @@
 module Even exposing (Even, add, multiply, n0, n2)
 
-import Typed exposing (Checked, Public, Typed, isChecked, tag)
+import Typed exposing (Checked, Public, Typed, tag)
 
 
 type alias Even =
@@ -15,19 +15,15 @@ type
 
 multiply : Int -> Even -> Even
 multiply factor =
-    \even ->
-        even
-            |> Typed.map (\int -> int * factor)
-            |> isChecked Even
+    Typed.mapTo Even (\int -> int * factor)
 
 
 add : Even -> Even -> Even
 add toAddEven =
     \even ->
         (even |> Typed.and toAddEven)
-            |> Typed.map
+            |> Typed.mapTo Even
                 (\( int, toAddInt ) -> int + toAddInt)
-            |> isChecked Even
 
 
 n0 : Even

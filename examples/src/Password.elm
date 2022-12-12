@@ -1,7 +1,7 @@
 module Password exposing (PasswordGood, PasswordUnchecked, check, length, unchecked)
 
 import Set exposing (Set)
-import Typed exposing (Checked, Internal, Tagged, Typed, internal, isChecked, tag)
+import Typed exposing (Checked, Internal, Tagged, Typed, internal, tag)
 
 
 type alias Password goodOrUnchecked =
@@ -38,7 +38,7 @@ check passwordToTest =
         Err "choose a less common password"
 
     else
-        Ok (passwordToTest |> isChecked Password)
+        Ok (passwordToTest |> Typed.isChecked Password)
 
 
 commonPasswords : Set String

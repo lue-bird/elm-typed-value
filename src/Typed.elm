@@ -4,7 +4,9 @@ module Typed exposing
     , Checked, isChecked
     , Public, untag
     , Internal, internal
-    , map, and, mapToTyped
+    , map, mapToTyped, mapTo, and
+    , mapWrap, wrapIsChecked, andWrap
+    , mapUnwrap
     )
 
 {-|
@@ -40,7 +42,13 @@ module Typed exposing
 
 ## transform
 
-@docs map, and, mapToTyped
+@docs map, mapToTyped, mapTo, and
+
+
+## wrapping
+
+@docs mapWrap, wrapIsChecked, andWrap
+@docs mapUnwrap
 
 
 ### [`serialize`](https://package.elm-lang.org/packages/MartinSStewart/elm-serialize/latest/) examples
@@ -227,7 +235,7 @@ type Checked
 
 {-| Create a new [`Tagged`](#Tagged) value.
 
-  - can be [`Checked`](#Checked) with [`isChecked`](#isChecked)
+  - can be [`Checked`](#Checked) with [`isChecked`](#isChecked) or [`mapTo`](#mapTo)
   - becomes [`Internal`](#Internal)/[`Public`](#Public) when annotated that way
 
 Modifying won't change the type.
@@ -249,24 +257,28 @@ tag tag_ value =
     type alias Prime =
         Typed Checked PrimeTag Public Int
 
+    type PrimeTag
+        = Prime
+
+    n3 : Prime
     n3 =
         3 |> tag Prime
 
+    n5 : Prime
     n5 =
         5 |> tag Prime
 
-in another `module`
+    -- in another module using Prime
 
-    import Tuple.Extra as Tuple
     import Typed exposing (untag)
 
-    ( Prime.n3, Prime.n5 ) |> Tuple.map untag
+    ( n3, n5 ) |> Tuple.mapBoth untag untag
     --> ( 3, 5 )
 
-    (Prime.n3 |> untag) + (Prime.n5 |> untag)
+    (n3 |> untag) + (n5 |> untag)
     --> 8
 
-    (Prime.n3 |> untag) < (Prime.n5 |> untag)
+    (n3 |> untag) < (n5 |> untag)
     --> True
 
 -}
@@ -275,30 +287,159 @@ untag =
     \(Typed _ value) -> value
 
 
-{-| [Map](#map)ping a [`Checked`](#Checked) value only results in a [`Tagged`](#Tagged) value.
+{-| To confirm that its value should be considered [`Checked`](#Checked), use `isChecked tag`
 
-To confirm that the result is [`Checked`](#Checked), use `isChecked tag`.
+    module Even exposing (Even, add, multiply)
 
-The type of `tag` can change in that operation.
+    import Typed exposing (Checked, Public, Typed)
 
-    import Typed exposing (isChecked, mapToTyped)
+    type alias Even =
+        Typed Checked EvenTag Public Int
+
+    type EvenTag
+        = Even
+
+    multiply : Int -> Even -> Even
+    multiply factor =
+        \even ->
+            even
+                |> Typed.map (\int -> int * factor)
+                |> Typed.isChecked Even
+
+    add : Even -> Even -> Even
+    add toAddEven =
+        \even ->
+            even
+                |> Typed.and toAddEven
+                |> Typed.map
+                    (\( int, toAddInt ) -> int + toAddInt)
+                |> Typed.isChecked Even
+
+If the tag would change after [`map`](#map) however, use [`mapTo`](#mapTo)
 
     oddAddOdd : Odd -> Odd -> Even
     oddAddOdd oddToAdd =
         \odd ->
-            (\o0 o1 -> o1 + o2)
-                |> Typed.mapEat odd
-                |> mapToTyped (Typed.mapEat oddToAdd)
-                |> isChecked Even
+            odd
+                |> Typed.and oddToAdd
+                -- ↓ same as mapTo Even (\( o0, o1 ) -> o0 + 01)
+                |> Typed.map (\( o0, o1 ) -> o0 + 1)
+                |> Typed.isChecked Even
+
+[`mapTo`](#mapTo) is better here since you don't have weird intermediate results like
+
+    odd
+        -- : Odd
+        |> Typed.and oddToAdd
+        |> Typed.map (\( o0, o1 ) -> o0 + 1)
+        --: Odd
+        |> ...
 
 -}
 isChecked :
     tagChecked
-    -> Typed whoCanCreate_ tag_ whoCanAccess value
-    -> Typed checked_ tagChecked whoCanAccess value
+    ->
+        (Typed whoCanCreate_ tagChecked whoCanAccess_ thing
+         -> Typed checked_ tagChecked whoCanAccessChecked_ thing
+        )
 isChecked tagConfirmation =
+    \(Typed _ thing) ->
+        thing |> Typed tagConfirmation
+
+
+{-| [`map`](#map) which allows specifying how the tag changes
+while keeping its access and create promises.
+
+    fromMultiplyingPrimes : Prime -> Prime -> NonPrime
+    fromMultiplyingPrimes primeA primeB =
+        (primeA |> Typed.and primeB)
+            |> Typed.mapTo NonPrime (\a b -> a * b)
+
+If the tag stays the same, just [`map`](#map)
+and if necessary add an [`isChecked`](#isChecked)
+
+-}
+mapTo :
+    tagMapped
+    -> (value -> valueMapped)
+    ->
+        (Typed whoCanCreate_ tag_ Public value
+         -> Typed whoCanCreateMapped_ tagMapped whoCanAccessMapped_ valueMapped
+        )
+mapTo mappedTag valueChange =
     \(Typed _ value) ->
-        value |> Typed tagConfirmation
+        value |> valueChange |> Typed mappedTag
+
+
+{-| [`map`](#map), then grab the existing tag together with a wrapper tag.
+
+    type alias Hashing subject tag =
+        Typed Checked tag Public (subject -> Hash)
+
+    type Each
+        = Each
+
+    reverse :
+        Hashing element elementHashTag
+        -> Hashing (List element) ( Each, elementHashTag )
+    reverse elementHashing =
+        Typed.mapWrap Each
+            (\elementToHash ->
+                \list ->
+                    list |> List.map elementToHash |> Hash.sequence
+            )
+            elementHashing
+
+Use [`andWrap`](#andWrap) to map multiple [`Typed`](#Typed)s
+
+This doesn't violate any rules because you have no way of getting to the wrapped tag.
+
+-}
+mapWrap :
+    mappedTagWrapChecked
+    -> (value -> valueMapped)
+    ->
+        (Typed whoCanCreate_ tag Public value
+         -> Typed whoCanCreateMapped_ ( mappedTagWrapChecked, tag ) whoCanAccessMapped_ valueMapped
+        )
+mapWrap mappedTagWrap valueChange =
+    \(Typed tag_ value) ->
+        value |> valueChange |> Typed ( mappedTagWrap, tag_ )
+
+
+{-| Set the contained thing as "[`isChecked`](#isChecked)" by supplying the wrapper tag.
+-}
+wrapIsChecked :
+    tagWrapChecked
+    ->
+        (Typed whoCanCreate_ ( tagWrapChecked, tag ) whoCanAccess value
+         -> Typed checked_ ( tagWrapChecked, tag ) whoCanAccess value
+        )
+wrapIsChecked mappedTag =
+    \(Typed ( _, tag_ ) value) ->
+        value |> Typed ( mappedTag, tag_ )
+
+
+{-| Extract the unwrapped tag from the current tag.
+
+    tag Secret "secret"
+        --: Typed Checked Public String
+        |> Typed.andWrap (tag Known "known")
+        |> Typed.mapUnwrap (\( secret, _ ) -> secret)
+        --: Typed Tagged Secret Public String
+        |> Typed.untag
+    --> "secret"
+
+-}
+mapUnwrap :
+    (thing -> thingUnwrapped)
+    ->
+        (Typed whoCanCreate_ ( tagWrap_, tagWrapped ) whoCanAccess thing
+         -> Typed Tagged tagWrapped whoCanAccess thingUnwrapped
+        )
+mapUnwrap thingUnwrap =
+    \(Typed ( _, tagWrapped ) value) ->
+        value |> thingUnwrap |> Typed tagWrapped
 
 
 {-| Change the value.
@@ -317,8 +458,10 @@ If it was [`Checked`](#Checked) before, it becomes just [`Tagged`](#Tagged).
 -}
 map :
     (value -> valueMapped)
-    -> Typed whoCanCreate_ tag whoCanAccess value
-    -> Typed Tagged tag whoCanAccess valueMapped
+    ->
+        (Typed whoCanCreate_ tag whoCanAccess value
+         -> Typed Tagged tag whoCanAccess valueMapped
+        )
 map valueChange =
     \(Typed tag_ value) ->
         value |> valueChange |> Typed tag_
@@ -326,9 +469,29 @@ map valueChange =
 
 {-| Use the value to return a `Typed` with the **same tag & access promise**.
 
-    module Cat exposing (feed)
+    module Home exposing (catOnUnhappyFeed)
 
-    import Typed exposing (mapToTyped)
+    import Cat
+    import Typed
+
+    catOnUnhappyFeed : Cat -> Cat
+    catOnUnhappyFeed =
+        cat
+            |> Typed.mapToTyped
+                (\catState ->
+                    case catState.mood of
+                        Unhappy ->
+                            cat |> Cat.feed
+
+                        Happy ->
+                            cat
+                )
+
+using
+
+    module Cat exposing (Cat, feed)
+
+    import Typed
 
     type alias Cat =
         Typed
@@ -344,37 +507,17 @@ map valueChange =
                 { cat | foodReserves = cat.foodReserves + 10 }
             )
 
-in another `module`
-
-    module Home exposing (feedIfUnhappy)
-
-    import Typed exposing (mapToTyped)
-    import Cat
-
-    feedIfUnhappy : Cat -> Cat
-    feedIfUnhappy =
-        cat
-            |> mapToTyped
-                (\cat ->
-                    case cat.mood of
-                        Unhappy ->
-                            cat |> Cat.feed
-
-                        Happy ->
-                            cat
-                )
-
-    🐱 |> meet 🐦 --> { 🐱, 🍗 }
-
-Feed multiple arguments with [`and`](#and)
+Map multiple arguments with [`and`](#and)
 
 -}
 mapToTyped :
     (value
      -> Typed whoCanCreateMapped tag whoCanAccess valueMapped
     )
-    -> Typed whoCanCreate_ tag whoCanAccess value
-    -> Typed whoCanCreateMapped tag whoCanAccess valueMapped
+    ->
+        (Typed whoCanCreate_ tag whoCanAccess value
+         -> Typed whoCanCreateMapped tag whoCanAccess valueMapped
+        )
 mapToTyped valueMapToTyped =
     \(Typed _ value) ->
         value |> valueMapToTyped
@@ -386,60 +529,74 @@ mapToTyped valueMapToTyped =
 > as long as a `Typed` with the **same tag & access promises** are returned in the end
 
 
-#### feed [`map`](#map)
+#### into [`map`](#map)
 
     module Prime exposing (Prime, n3, n5)
 
-    import Typed exposing (Checked, Public, Typed, isChecked, mapToTyped)
+    import Typed exposing (Checked, Public, Typed, mapToTyped, tag)
 
     type alias Prime =
         Typed Checked PrimeTag Public Int
 
+    type PrimeTag
+        = Prime
+
+    n3 : Prime
     n3 =
-        tag 3 |> isChecked Prime
+        tag Prime 3
 
+    n5 : Prime
     n5 =
-        tag 5 |> isChecked Prime
+        tag Prime 5
 
-
-    module NonPrime exposing (NonPrime)
-
-    import Prime exposing (Prime)
-
+    -- module NonPrime exposing (NonPrime)
+    -- import Prime exposing (Prime)
+    --
     type alias NonPrime =
         Typed Checked NonPrimeTag Public Int
+
+    type NonPrimeTag
+        = NonPrime
 
     fromMultiplyingPrimes : Prime -> Prime -> NonPrime
     fromMultiplyingPrimes primeA primeB =
         (primeA |> Typed.and primeB)
-            |> Typed.map (\a b -> a * b)
-            |> isChecked NonPrime
+            |> Typed.mapTo NonPrime (\a b -> a * b)
 
 
-#### feed [`mapToTyped`](#mapToTyped)
+#### into [`mapToTyped`](#mapToTyped)
 
-    min :
-        Typed whoCanCreate tag whoCanAccess Int
-        -> Typed whoCanCreate tag whoCanAccess Int
-        -> Typed whoCanCreate tag whoCanAccess Int
-    min =
-        \comparable0 comparable1 ->
-            comparable0
-                |> Typed.and comparable1
+    module Typed.Int
+
+    smaller : Typed create tag access Int -> Typed create tag access Int -> Typed create tag access Int
+    smaller =
+        \int0Typed int1Typed ->
+            int0Typed
+                |> Typed.and int1Typed
                 |> Typed.mapToTyped
-                    (\( c0, c1 ) ->
-                        if c0 < c1 then
-                            comparable1
-
+                    (\( int0, int1 ) ->
+                        if int0 <= int1 then
+                            int0Typed
                         else
-                            comparable0
+                            -- int1 < int0
+                            int1Typed
                     )
+
+    -- in another module
+
+    type OddTag
+        = Odd
+
+    smaller (Typed.tag Odd 3) (Typed.tag Odd 5)
+    --> Typed.tag Odd 3
 
 -}
 and :
     Typed whoCanCreateFood_ tag whoCanAccess valueFoodLater
-    -> Typed whoCanCreate_ tag whoCanAccess valueFoodEarlier
-    -> Typed Tagged tag whoCanAccess ( valueFoodEarlier, valueFoodLater )
+    ->
+        (Typed whoCanCreate_ tag whoCanAccess valueFoodEarlier
+         -> Typed Tagged tag whoCanAccess ( valueFoodEarlier, valueFoodLater )
+        )
 and typedFoodLater =
     \typedFoodEarlier ->
         let
@@ -452,11 +609,51 @@ and typedFoodLater =
         ( foodEarlier, foodLater ) |> tag tag_
 
 
+{-| [`and`](#and) which keeps the tag from the first [`Typed`](#Typed) in the chain as the wrapping tag.
+
+    type alias Hashing thing tag =
+        Typed Checked tag Public thing
+
+    type HashBy
+        = HashBy
+
+    hashBy :
+        Map mapTag (thing -> thingMapped)
+        -> Hashing thingHashingTag thingMapped
+        -> Hashing ( HashBy, ( mapTag, thingHashingTag, ) ) thingMapped
+    hashBy map mappedHashing =
+        map
+            |> Typed.andWrap mappedHashing
+            |> Typed.mapWrap HashBy
+                (\( change, mappedHash ) ->
+                    \toHash ->
+                        toHash |> change |> mappedHash
+                )
+
+-}
+andWrap :
+    Typed whoCanCreateFood_ tagFood Public valueFoodLater
+    ->
+        (Typed whoCanCreate_ tagWrap whoCanAccess valueFoodEarlier
+         -> Typed Tagged ( tagWrap, tagFood ) whoCanAccess ( valueFoodEarlier, valueFoodLater )
+        )
+andWrap typedFoodLater =
+    \typedFoodEarlier ->
+        let
+            (Typed tagWrap foodEarlier) =
+                typedFoodEarlier
+
+            (Typed tag_ foodLater) =
+                typedFoodLater
+        in
+        ( foodEarlier, foodLater ) |> tag ( tagWrap, tag_ )
+
+
 {-| If you have an [`Internal`](#Internal) value, its value can't be read by users.
 
 However, if you have access to the `tag` constructor, you can access this value.
 
-    import Typed exposing (Checked, Internal, Typed, internal)
+    import Typed exposing (Checked, Internal, Typed)
 
     type alias ListOptimized element =
         Typed
@@ -471,7 +668,7 @@ However, if you have access to the `tag` constructor, you can access this value.
     toList =
         \listOptimized ->
             listOptimized
-                |> internal ListOptimized
+                |> Typed.internal ListOptimized
                 |> .list
                 |> List.map (\lazy -> lazy ())
 
@@ -496,10 +693,10 @@ However, if you have access to the `tag` constructor, you can access this value.
         \( listOptimizedA, listOptimizedB ) ->
             let
                 a =
-                    listOptimizedA |> internal ListOptimized
+                    listOptimizedA |> Typed.internal ListOptimized
 
                 b =
-                    listOptimizedB |> internal ListOptimized
+                    listOptimizedB |> Typed.internal ListOptimized
             in
             (a.length == b.length)
                 && (( a.list, b.list ) |> listLazyEqual)
@@ -509,8 +706,10 @@ Note: this is not all that optimized.
 -}
 internal :
     tag
-    -> Typed whoCanCreate_ tag whoCanAccess_ value
-    -> value
+    ->
+        (Typed whoCanCreate_ tag whoCanAccess_ value
+         -> value
+        )
 internal _ =
     \(Typed _ value) ->
         value

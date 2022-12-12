@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "lue-bird/elm-typed-value",
-    "summary": "better 1-constructor types",
+    "summary": "type with 1 variant → save boilerplate safely",
     "license": "MIT",
     "version": "7.0.1",
     "exposed-modules": [
@@ -11,5 +11,7 @@
     "dependencies": {
         "elm/core": "1.0.2 <= v < 2.0.0"
     },
-    "test-dependencies": {}
+    "test-dependencies": {
+        "elm-explorations/test": "2.1.0 <= v < 3.0.0"
+    }
 }
