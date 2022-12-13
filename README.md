@@ -2,27 +2,30 @@
 
 > type with 1 variant → save boilerplate safely
 
-Wrap your thing in a [`Typed`](Typed#Typed) with a `tag` (↑ [prior art](#prior-art)).
+Wrap your thing in a [`Typed`](Typed#Typed) with a tag (↑ [prior art](#prior-art)).
 
 → A `Typed ... Meters ... Float` isn't accepted as `Typed ... Kilos ... Float` anymore!
 
-For `type`s with just one variant with an attached thing, `Typed` can be a convenient replacement (↑ [limits](#limits))
+For `type`s with just one variant with an attached thing,
+[`Typed`](Typed#Typed) can be a convenient replacement (↑ [limits](#limits))
 
 with `type`
 ```elm
 extract =
-    \(Meters value) ->
-        value
+    \(Meters quantity) ->
+        quantity
 
 map alter =
-    \(Meters value) ->
-        value |> alter |> Meters
+    \(Meters quantity) ->
+        quantity |> alter |> Meters
 ```
-and other helpers like map2 etc. are all covered by [`Typed`](Typed#Typed)
+and other helpers like mapping multiple etc. are all covered by [`Typed`](Typed#Typed)
+
+Plus you don't have to spell out the obvious:
 ```elm
 3.2 |> Meters.fromFloat
 
-naturalNumber |> NumberNatural.toInt
+prime |> Prime.toInt
 height |> Meters.toFloat
 
 (oneHeight |> Meters.toFloat)
@@ -30,12 +33,12 @@ height |> Meters.toFloat
     |> Meters.fromFloat
 ```
 
-with `Typed`
+with [`Typed`](#Typed)
 
 ```elm
 3.2 |> tag Meters
 
-naturalNumber |> untag
+prime |> untag
 height |> untag
 
 oneHeight
@@ -45,48 +48,48 @@ oneHeight
 
 # Kinds of [`Typed`](Typed#Typed)
 
-  - [`Checked`](Typed#Checked) → only "validated" values
+  - [`Checked`](Typed#Checked) → only "validated" things like when you'd use
     ```elm
-    module NumberNatural exposing (NumberNatural)
+    module Prime exposing (Prime)
 
-    type NumberNatural
-        -- nobody outside this module can call this constructor
-        = NumberNatural Int
+    type Prime
+        = -- nobody outside this module can use this variant
+          Prime Int
     ```
-    creating & altering `NumberNatural`s will only be possible inside that `module`
+    creating & altering `Prime`s will only be possible inside that `module`
 
-  - [`Tagged`](Typed#Tagged) → attach a label
+    An opaque `type` can't expose the variant for destructuring.
+    [`Typed`](#Typed) can, as we'll see in [section `Checked Public`](#checked-public).
+
+  - [`Tagged`](Typed#Tagged) → attach a label things like when you'd use
     ```elm
-    type Cat =
-        -- constructor can be used anywhere
-        Cat { name : String, mood : Mood }
+    type Cat
+        = -- variant can be used anywhere
+          Cat { name : String, mood : Mood }
     ```
-    Users can create **& alter** new `Cat`s everywhere
+    Users can create & alter new `Cat`s everywhere
 
-  - [`Public`](Typed#Public) → allow users to access (→ [`untag`](Typed#untag)) the value
+  - [`Public`](Typed#Public) → allow everyone to access (→ [`untag`](Typed#untag)) the thing
 
-  - [`Internal`](Typed#Internal) → hide the value from users
+  - [`Internal`](Typed#Internal) → hide from users.
+    You can only access the [`internal`](Typed#internal) thing using the tag.
 
 ## [`Tagged`](Typed#Tagged) [`Public`](Typed#Public)
 
 ```elm
 import Typed exposing (Typed, Tagged, Public, tag)
 
-type alias Pet tag specificProperties =
-    Typed
-        Tagged
-        tag 
-        Public
-        { specificProperties | name : String, mood : Mood }
+type alias PetData specificProperties =
+    { specificProperties | name : String, mood : Mood }
 
 type alias Cat =
-    Pet CatTag { napsPerDay : Float }
+    Typed Tagged CatTag Public (PetData { napsPerDay : Float })
 
 type CatTag
     = Cat
 
 type alias Dog =
-    Pet DogTag { barksPerDay : Float }
+    Typed Tagged DogTag Public (PetData { barksPerDay : Float })
 
 type DogTag
     = Dog
@@ -94,9 +97,8 @@ type DogTag
 sit : Dog -> Dog
 sit =
     Typed.map (\d -> { d | mood = Neutral })
-```
 
-```elm
+howdy : Cat
 howdy =
     { name = "Howdy", mood = Happy, napsPerDay = 2.2 }
         |> tag Cat
@@ -106,9 +108,10 @@ howdy |> sit -- error
 
 Another example:
 
+```elm 
+module Pixels exposing (Pixels, PixelsTag(..))
+```
 ```elm
-module Pixels exposing (Pixels, PixelsTag(..), ratio)
-
 import Typed exposing (Typed, Tagged, Public, tag)
 
 type alias Pixels =
@@ -142,7 +145,8 @@ defaultWidth |> Typed.untag
 
 ```elm
 module Even exposing (Even, add, multiply, n0, n2)
-
+```
+```elm
 import Typed exposing (Typed, Checked, Public, tag)
 
 
@@ -160,7 +164,7 @@ multiply factor =
     \even ->
         even
             |> Typed.map (\int -> int * factor)
-            |> Typed.isChecked Even
+            |> Typed.toChecked Even
 
 
 add : Even -> Even -> Even
@@ -170,7 +174,7 @@ add toAddEven =
             |> Typed.and toAddEven
             |> Typed.map
                 (\( int, toAddInt ) -> int + toAddInt)
-            |> Typed.isChecked Even
+            |> Typed.toChecked Even
 
 
 n0 : Even
@@ -197,22 +201,22 @@ n2 |> multiply -5 |> cakeForEven
 
 ## [`Checked`](Typed#Checked) [`Internal`](Typed#Internal)
 
-A validated value that can't be directly accessed by a user.
+A validated thing that can't be directly accessed by a user.
 
 A module that only exposes randomly generated unique `Id`s:
 
 ```elm
 module Id exposing (Id, random, toBytes, toString)
-
+```
+```elm
 import Typed exposing (Typed, Checked, Internal, tag)
-
-
 import Random
 
 type alias Id =
     Typed Checked IdTag Internal (List Int)
 
-type IdTag = Id
+type IdTag
+    = Id
 
 random : Random.Generator Id
 random =
@@ -229,16 +233,16 @@ toString --...
 ## Combined with [`Tagged`](Typed#Tagged) [`Internal`](Typed#Internal)
 
 ```elm
-module Password exposing (PasswordUnchecked, PasswordGood, check, length, unchecked)
-
+module Password exposing (PasswordUnchecked, PasswordGood, toChecked, length, unchecked)
+```
+```elm
 import Typed exposing (Typed, Tagged, Checked, Internal, tag, internal)
-
 
 type alias Password goodOrUnchecked =
     Typed goodOrUnchecked PasswordTag Internal String
 
 type PasswordTag
-    = -- don't expose the tag constructor
+    = -- don't expose the tag variant
       Password
 
 type alias PasswordGood =
@@ -252,8 +256,8 @@ unchecked : String -> PasswordUnchecked
 unchecked =
     tag Password
 
-check : PasswordUnchecked -> Result String PasswordGood
-check =
+toChecked : PasswordUnchecked -> Result String PasswordGood
+toChecked =
     \passwordToTest ->
         let
             passwordString =
@@ -266,7 +270,7 @@ check =
             Err "Choose a less common password."
 
         else
-            passwordToTest |> Typed.isChecked Password |> Ok
+            passwordToTest |> Typed.toChecked Password |> Ok
 
 commonPasswords =
     Set.fromList
@@ -277,7 +281,7 @@ commonPasswords =
 ```
 You can then decide that only a part of the information should be accessible.
 ```elm
--- doesn't expose too much information.
+-- doesn't expose too much information
 length : Password goodOrUnchecked_ -> Int
 length =
     \password ->
@@ -285,20 +289,22 @@ length =
             |> internal Password
             |> String.length
 ```
+used in
 
 ```elm
-module Register exposing (Model, Event, ui, reactTo, modelInitial)
-
+module Register exposing (State, Event, ui, reactTo, stateInitial)
+```
+```elm
 import Password exposing (PasswordUnchecked)
 
-type alias Model =
+type alias State =
     { -- accessing user-typed password is impossible
       passwordTyped : PasswordUnchecked
     , loggedIn : LoggedIn
     }
 
-modelInitial : Model
-modelInitial =
+stateInitial : State
+stateInitial =
     { passwordTyped =
         "" |> Password.unchecked
     , loggedIn = NotLoggedIn
@@ -314,16 +320,17 @@ type Event
     = PasswordEdited PasswordUnchecked
     | PasswordConfirmed PasswordGood
 
-reactTo : Event -> Model -> Model
+reactTo : Event -> (Model -> Model)
 reactTo event =
-    \model ->
-        case event of
-            PasswordEdited uncheckedPassword ->
+    case event of
+        PasswordEdited uncheckedPassword ->
+            \model ->
                 { model
                     | passwordTyped = uncheckedPassword
                 }
-            
-            PasswordConfirmed passwordGood ->
+        
+        PasswordConfirmed passwordGood ->
+            \model ->
                 { model
                     | passwordTyped =
                         "" |> Password.unchecked
@@ -350,7 +357,7 @@ ui =
                 |> Html.value
             ]
             []
-        , case passwordTyped |> Password.check of
+        , case passwordTyped |> Password.toChecked of
             Ok passwordGood ->
                 Html.button
                     [ onClick (PasswordConfirmed passwordGood) ]
@@ -367,27 +374,6 @@ userPassword |> untag |> leak
 ```
 → compile-time error: expected `Public` but found `Internal`
 
-## narrow type > > [`Checked`](Typed#Checked)
-
-More often than not,
-there's already a type with the same promises
-even when created directly by users:
-
-```diff
-type alias StringFilled =
--    Typed Checked StringFilledTag Public String
-+    Hand { head : Char, tail : String } Never Empty
-
-type alias PasswordGoodInternal =
--    String
-+    Arr (Min Nat10) Char
-```
-Used here:
-
-  - [`typesafe-array`](https://package.elm-lang.org/packages/lue-bird/elm-typesafe-array/latest/)
-  - [`emptiness-typed`](https://dark.elm.dmy.fr/packages/lue-bird/elm-emptiness-typed/latest/)
-
-
 # prior art
 
 This package wouldn't exist without inspiration:
@@ -401,7 +387,42 @@ especially
 
 # limits
 
-## changing a [`Checked`](Typed#Checked) [`Internal`](Typed#Internal) value is a major change
+## the type of the [`Public`](#Public) untagged thing is not obvious but used often
+
+In that case expose more descriptive API and leave the rest as "safe internals"!
+```elm
+toDescriptiveValue : TypedThing -> DescriptiveValue
+toDescriptiveValue =
+    Typed.internal ThingTag
+```
+Maybe even make it [`Internal`](Typed#Internal) to not make [`untag`](Typed#untag) available.
+
+## narrow type > [`Checked`](Typed#Checked)
+
+More often than not,
+there's already a type with the same promises
+even when created directly by users:
+
+```elm
+type alias StringFilled =
+    Typed Checked StringFilledTag Public String
+
+type alias PasswordLongEnough =
+    Typed Checked PasswordLongEnoughTag Public String
+```
+replaced with
+```elm
+type alias StringFilled =
+    { head : Char, tail : String }
+
+type alias PasswordLongEnough =
+    ArraySized (Min (Fixed N10)) Char
+```
+Here using [`typesafe-array`](https://package.elm-lang.org/packages/lue-bird/elm-typesafe-array/latest/)
+
+Use those! Extensively. No opaque type or Checked necessary
+
+## changing a [`Checked`](Typed#Checked) [`Internal`](Typed#Internal) thing is a major change
 
 For many this might be a deal-breaker.
 

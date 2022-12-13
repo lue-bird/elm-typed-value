@@ -7,10 +7,9 @@ type alias Even =
     Typed Checked EvenTag Public Int
 
 
-type
-    EvenTag
-    -- don't expose this constructor
-    = Even
+type EvenTag
+    = -- don't expose this variant
+      Even
 
 
 multiply : Int -> Even -> Even

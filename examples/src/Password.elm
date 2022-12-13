@@ -1,4 +1,4 @@
-module Password exposing (PasswordGood, PasswordUnchecked, check, length, unchecked)
+module Password exposing (PasswordGood, PasswordUnchecked, toChecked, length, unchecked)
 
 import Set exposing (Set)
 import Typed exposing (Checked, Internal, Tagged, Typed, internal, tag)
@@ -25,8 +25,8 @@ unchecked =
     tag Password
 
 
-check : PasswordUnchecked -> Result String PasswordGood
-check passwordToTest =
+toChecked : PasswordUnchecked -> Result String PasswordGood
+toChecked passwordToTest =
     let
         passwordString =
             internal Password passwordToTest
@@ -38,7 +38,7 @@ check passwordToTest =
         Err "choose a less common password"
 
     else
-        Ok (passwordToTest |> Typed.isChecked Password)
+        Ok (passwordToTest |> Typed.toChecked Password)
 
 
 commonPasswords : Set String

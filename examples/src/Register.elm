@@ -106,7 +106,7 @@ ui =
                         , placeholder = Nothing
                         , label = "register" |> UIn.labelHidden
                         }
-                  , case passwordTyped |> Password.check of
+                  , case passwordTyped |> Password.toChecked of
                         Ok passwordGood ->
                             UIn.button []
                                 { onPress = PasswordConfirmed passwordGood |> Just
