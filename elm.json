@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "lue-bird/elm-typed-value",
-    "summary": "type with 1 variant → save boilerplate safely",
+    "summary": "a type with 1 variant but convenient",
     "license": "MIT",
     "version": "7.0.1",
     "exposed-modules": [

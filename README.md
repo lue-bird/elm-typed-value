@@ -1,25 +1,23 @@
-# elm-typed-value
+# [elm-typed-value](https://dark.elm.dmy.fr/packages/lue-bird/elm-typed-value/latest/)
 
-> type with 1 variant → save boilerplate safely
+For a `type` with just 1 variant,
+[`Typed`](Typed#Typed) is a convenient, safe replacement (↑ [limits](#limits))
 
-Wrap your thing in a [`Typed`](Typed#Typed) with a tag (↑ [prior art](#prior-art)).
+Attach a tag
+so a `Typed .. Meters .. Float` isn't accepted as `Typed .. Kilos .. Float` anymore.
 
-→ A `Typed ... Meters ... Float` isn't accepted as `Typed ... Kilos ... Float` anymore!
-
-For `type`s with just one variant with an attached thing,
-[`Typed`](Typed#Typed) can be a convenient replacement (↑ [limits](#limits))
-
-with `type`
+`type` boilerplate ↓ is covered by [`Typed`](Typed#Typed)
 ```elm
-extract =
+quantity =
     \(Meters quantity) ->
         quantity
 
-map alter =
+alter quantityAlter =
     \(Meters quantity) ->
-        quantity |> alter |> Meters
+        quantity |> quantityAlter |> Meters
 ```
-and other helpers like mapping multiple etc. are all covered by [`Typed`](Typed#Typed)
+and other helpers like mapping multiple etc.
+
 
 Plus you don't have to spell out the obvious:
 ```elm
@@ -33,7 +31,7 @@ height |> Meters.toFloat
     |> Meters.fromFloat
 ```
 
-with [`Typed`](#Typed)
+with [`Typed`](Typed#Typed)
 
 ```elm
 3.2 |> tag Meters
@@ -48,9 +46,22 @@ oneHeight
 
 # Kinds of [`Typed`](Typed#Typed)
 
+  - [`Tagged`](Typed#Tagged) → attach a label things like when you'd use
+    ```elm
+    -- module Cat exposing (Cat(..))
+
+    type Cat
+        = -- variant can be used anywhere
+          Cat { name : String, mood : Mood }
+    ```
+    Users can create & alter new `Cat`s everywhere
+
+    A `type(..)` can't expose the variant for creating & altering without allowing access as well.
+    [`Typed`](Typed#Typed) can, as we'll see in [section `Tagged Internal`](#combined-with-tagged-internal)
+
   - [`Checked`](Typed#Checked) → only "validated" things like when you'd use
     ```elm
-    module Prime exposing (Prime)
+    -- module Prime exposing (Prime)
 
     type Prime
         = -- nobody outside this module can use this variant
@@ -58,38 +69,27 @@ oneHeight
     ```
     creating & altering `Prime`s will only be possible inside that `module`
 
-    An opaque `type` can't expose the variant for destructuring.
-    [`Typed`](#Typed) can, as we'll see in [section `Checked Public`](#checked-public).
+    An opaque `type` can't expose the variant for destructuring only.
+    [`Typed`](Typed#Typed) can, as we'll see in [section `Checked Public`](#checked-public)
 
-  - [`Tagged`](Typed#Tagged) → attach a label things like when you'd use
-    ```elm
-    type Cat
-        = -- variant can be used anywhere
-          Cat { name : String, mood : Mood }
-    ```
-    Users can create & alter new `Cat`s everywhere
+  - [`Public`](Typed#Public) → everyone can access → [`untag`](Typed#untag)
 
-  - [`Public`](Typed#Public) → allow everyone to access (→ [`untag`](Typed#untag)) the thing
-
-  - [`Internal`](Typed#Internal) → hide from users.
-    You can only access the [`internal`](Typed#internal) thing using the tag.
+  - [`Internal`](Typed#Internal)
+    → only those with the tag can access → [`internal`](Typed#internal)
 
 ## [`Tagged`](Typed#Tagged) [`Public`](Typed#Public)
 
 ```elm
 import Typed exposing (Typed, Tagged, Public, tag)
 
-type alias PetData specificProperties =
-    { specificProperties | name : String, mood : Mood }
-
 type alias Cat =
-    Typed Tagged CatTag Public (PetData { napsPerDay : Float })
+    Typed Tagged CatTag Public { name : String, mood : Mood, napsPerDay : Float }
 
 type CatTag
     = Cat
 
 type alias Dog =
-    Typed Tagged DogTag Public (PetData { barksPerDay : Float })
+    Typed Tagged DogTag Public { name : String, mood : Mood, barksPerDay : Float }
 
 type DogTag
     = Dog
@@ -109,9 +109,8 @@ howdy |> sit -- error
 Another example:
 
 ```elm 
-module Pixels exposing (Pixels, PixelsTag(..))
-```
-```elm
+-- module Pixels exposing (Pixels, PixelsTag(..))
+
 import Typed exposing (Typed, Tagged, Public, tag)
 
 type alias Pixels =
@@ -144,9 +143,8 @@ defaultWidth |> Typed.untag
 ## [`Checked`](Typed#Checked) [`Public`](Typed#Public)
 
 ```elm
-module Even exposing (Even, add, multiply, n0, n2)
-```
-```elm
+-- module Even exposing (Even, n0, n2, add, multiplyBy)
+
 import Typed exposing (Typed, Checked, Public, tag)
 
 
@@ -159,8 +157,8 @@ type EvenTag
     = Even
 
 
-multiply : Int -> Even -> Even
-multiply factor =
+multiplyBy : Int -> Even -> Even
+multiplyBy factor =
     \even ->
         even
             |> Typed.map (\int -> int * factor)
@@ -195,8 +193,13 @@ cakeForEven _ =
 n0 |> Typed.map (\n -> n + 1) |> cakeForEven
 --→ compile-time error: is Tagged but expected Checked
 
-n2 |> multiply -5 |> cakeForEven
+n2 |> multiplyBy -5 |> cakeForEven
 --> { cake = () }
+```
+Above example is just for illustration! In practice, [prefer a narrow type](#always-prefer-narrow-type-over-checked)
+```elm
+type Even
+    = Times2 Int
 ```
 
 ## [`Checked`](Typed#Checked) [`Internal`](Typed#Internal)
@@ -206,9 +209,8 @@ A validated thing that can't be directly accessed by a user.
 A module that only exposes randomly generated unique `Id`s:
 
 ```elm
-module Id exposing (Id, random, toBytes, toString)
-```
-```elm
+-- module Id exposing (Id, random, toBytes, toString)
+
 import Typed exposing (Typed, Checked, Internal, tag)
 import Random
 
@@ -220,8 +222,8 @@ type IdTag
 
 random : Random.Generator Id
 random =
-    Random.list 2
-        (Random.int Random.minInt Random.maxInt)
+    Random.list 4
+        (Random.int 0 (2 ^ 32 - 1))
         |> Random.map (tag Id)
 
 -- the API stays the same even if the implementation changes
@@ -230,12 +232,19 @@ toString --...
 ```
 → Outside of this module, the only way to create an `Id` is `Id.random`
 
+Again, above example is just for illustration!
+In practice, [prefer a narrow type](#always-prefer-narrow-type-over-checked)
+as shown in [`elm-bits`](https://dark.elm.dmy.fr/packages/lue-bird/elm-bits/latest/)
+```elm
+type alias Id =
+    ArraySized (Exactly N128) Bit
+```
+
 ## Combined with [`Tagged`](Typed#Tagged) [`Internal`](Typed#Internal)
 
 ```elm
-module Password exposing (PasswordUnchecked, PasswordGood, toChecked, length, unchecked)
-```
-```elm
+-- module Password exposing (PasswordUnchecked, PasswordGood, toChecked, length, unchecked)
+
 import Typed exposing (Typed, Tagged, Checked, Internal, tag, internal)
 
 type alias Password goodOrUnchecked =
@@ -292,9 +301,8 @@ length =
 used in
 
 ```elm
-module Register exposing (State, Event, ui, reactTo, stateInitial)
-```
-```elm
+-- module Register exposing (State, Event, ui, reactTo, stateInitial)
+
 import Password exposing (PasswordUnchecked)
 
 type alias State =
@@ -387,21 +395,26 @@ especially
 
 # limits
 
-## the type of the [`Public`](#Public) untagged thing is not obvious but used often
+## the type of the [`Public`](Typed#Public) untagged thing is not obvious but used often
 
 In that case expose more descriptive API and leave the rest as "safe internals"!
+
+If you strictly want to avoid allowing [`untag`](Typed#untag) under all circumstances,
+make it [`Internal`](Typed#Internal)
+
 ```elm
 toDescriptiveValue : TypedThing -> DescriptiveValue
 toDescriptiveValue =
     Typed.internal ThingTag
 ```
-Maybe even make it [`Internal`](Typed#Internal) to not make [`untag`](Typed#untag) available.
 
-## narrow type > [`Checked`](Typed#Checked)
+## always prefer narrow type over [`Checked`](Typed#Checked)
 
 More often than not,
 there's already a type with the same promises
 even when created directly by users:
+
+Instead of
 
 ```elm
 type alias StringFilled =
@@ -410,7 +423,7 @@ type alias StringFilled =
 type alias PasswordLongEnough =
     Typed Checked PasswordLongEnoughTag Public String
 ```
-replaced with
+make it safe
 ```elm
 type alias StringFilled =
     { head : Char, tail : String }
@@ -420,11 +433,17 @@ type alias PasswordLongEnough =
 ```
 Here using [`typesafe-array`](https://package.elm-lang.org/packages/lue-bird/elm-typesafe-array/latest/)
 
-Use those! Extensively. No opaque type or Checked necessary
+Use those! Extensively. No opaque type or [`Checked`](Typed#Checked) necessary
 
-## changing a [`Checked`](Typed#Checked) [`Internal`](Typed#Internal) thing is a major change
+## packages: unnecessary major version bumps
 
-For many this might be a deal-breaker.
+All ↓ aren't breaking in practice but result in a major version bump
+
+  - [`Checked`](Typed#Checked) → [`Tagged`](Typed#Tagged)
+  - [`Internal`](Typed#Internal) → [`Public`](Typed#Public)
+  - [`Checked`](Typed#Checked) [`Internal`](Typed#Internal) thing type change
+
+For many package authors, this is a deal-breaker.
 
 Be explicit and choose a `type` for parts of information that could be added or removed in the future.
 
@@ -441,7 +460,7 @@ type alias Comment =
         }
 ```
 elm:
-> This type alias is recursive, forming an infinite type.
+> This type alias is recursive, forming an infinite type
 
 [recursive alias hint](https://github.com/elm/compiler/blob/master/hints/recursive-alias.md):
 > Somewhere in that cycle, you need to define an actual type to end the infinite expansion.

@@ -1,9 +1,9 @@
 module Typed exposing
     ( Typed
     , tag
-    , Tagged(..), Checked(..), toChecked
-    , Public(..), untag, toPublic
-    , Internal(..), internal
+    , Tagged, Checked, toChecked
+    , Public, untag, toPublic
+    , Internal, internal
     , map, mapToTyped, mapTo, and
     , mapToWrap, wrapToChecked
     , wrapToPublic, wrapInternal
@@ -20,7 +20,7 @@ module Typed exposing
 @docs tag
 
 
-### creator
+## creator
 
 @docs Tagged, Checked, toChecked
 
@@ -47,11 +47,15 @@ module Typed exposing
 
 A pretty specialized use-case which helps using tags you don't have access to _inside your wrapper tag_
 
+Examples in the [version 8 announcement](https://github.com/lue-bird/elm-typed-value/blob/master/announcement.md#800)
+
 @docs mapToWrap, wrapToChecked
 @docs wrapToPublic, wrapInternal
 @docs wrapAnd
 
 -}
+
+import Typed.Internal
 
 
 {-| A tagged thing.
@@ -64,7 +68,7 @@ It'll save some boilerplate.
 A [`Typed`](#Typed) knows
 
   - who has created it: [`Tagged`](#Tagged) | [`Checked`](#Checked)
-  - who can access: [`Public`](#Public) | [`Internal`](#Internal)
+  - who can access it: [`Public`](#Public) | [`Internal`](#Internal)
 
 More detailed explanations and examples
 → [readme](https://dark.elm.dmy.fr/packages/lue-bird/elm-typed-value/latest/)
@@ -102,11 +106,11 @@ If you really need to prevent users from finding out the inner thing without usi
       - ...
 
 -}
-type Typed creator tag accessRight untyped
-    = Typed tag untyped
+type alias Typed creator tag accessRight untyped =
+    Typed.Internal.Typed creator tag accessRight untyped
 
 
-{-| Only devs with access to the tag can access the [`internal`](#internal).
+{-| Only those with access to the tag can access the [`internal`](#internal) thing.
 
 → access can be limited to
 
@@ -129,36 +133,36 @@ type Typed creator tag accessRight untyped
     'exposed-modules' : [ "A", "B" ]
     ```
 
-This in combination with [`Checked`](#Checked) helps hiding the internal implementation just like a new `type`
-
-    import RecordWithoutConstructorFunction exposing (RecordWithoutConstructorFunction)
+This in combination with [`Checked`](#Checked)
+hides the internals just like an opaque `type`
 
     type alias ListOptimized element =
-        Typed Checked ListOptimizedTag Internal (ListOptimizedInternal element)
-
-    type alias ListOptimizedInternal element =
-        RecordWithoutConstructorFunction
+        Typed
+            Checked
+            ListOptimizedTag
+            Internal
             { list : List element, length : Int }
 
-[`RecordWithoutConstructorFunction`](https://dark.elm.dmy.fr/packages/lue-bird/elm-no-record-type-alias-constructor-function/latest/)
-tricks elm into not creating a `ListOptimizedInternal` constructor function
+    type ListOptimizedTag
+        = -- don't expose this variant
+          ListOptimizedTag
 
 -}
-type Internal
-    = Internal Never
+type alias Internal =
+    Typed.Internal.Internal
 
 
 {-| Anyone is able to access the untyped thing
 of a [`Typed`](#Typed) `... Public`
 by using [`untag`](#untag)
 -}
-type Public
-    = Public Never
+type alias Public =
+    Typed.Internal.Public
 
 
 {-| Anyone is able to create a [`Typed`](#Typed) `Tagged ...`.
 
-Example `Typed Tagged MetersTag ... Float`
+Example: `Typed Tagged MetersTag ... Float`
 → _every_ `Float` can be used as a quantity of `Meters`
 
 [`Typed`](#Typed) `Tagged ...` is also the result of trying to [`map`](#map) a [`Checked`](#Checked) thing
@@ -179,20 +183,20 @@ Example `Typed Tagged MetersTag ... Float`
 → any function that only takes `Checked Prime` really only receives the good stuff
 
 -}
-type Tagged
-    = Tagged Never
+type alias Tagged =
+    Typed.Internal.Tagged
 
 
 {-| Only someone with access to the tag is able to create one of those.
 
 In effect, this means that you can only let "validated" data be of this type.
 
-Example `... Checked ... NaturalNumberTag Int`
+Example: `... Checked ... NaturalNumberTag Int`
 → not every `Int` can be called a `NumberNatural`, it must be [checked](#toChecked)!
 
 -}
-type Checked
-    = Checked Never
+type alias Checked =
+    Typed.Internal.Checked
 
 
 
@@ -210,7 +214,7 @@ passwordSafe =
     tag NowItsSafe "secret1234 th1s iS private oO"
 
 passwordSafe |> Typed.untag
--- "secret1234 th1s iS private oO" oh no!
+--→ "secret1234 th1s iS private oO" oh no!
 ```
 
 instead
@@ -238,16 +242,16 @@ tag :
     -> untyped
     -> Typed creatorChecked_ tag accessRightPublic_ untyped
 tag tag_ untyped =
-    untyped |> Typed tag_
+    Typed.Internal.tag tag_ untyped
 
 
 
 -- ## access
 
 
-{-| The [`untag`](#untag)ged thing inside a [`Public`](#Public) `Typed`
+{-| The thing inside the [`Typed`](#Typed) [`Public`](#Public)
 
-    module Prime exposing (Prime, n3, n5)
+    -- module Prime exposing (Prime, n3, n5)
 
     type alias Prime =
         Typed Checked PrimeTag Public Int
@@ -264,14 +268,7 @@ tag tag_ untyped =
         5 |> tag Prime
 
     -- in another module using Prime
-
     import Typed exposing (untag)
-
-    ( n3, n5 ) |> Tuple.mapBoth untag untag
-    --> ( 3, 5 )
-
-    (n3 |> untag) + (n5 |> untag)
-    --> 8
 
     (n3 |> untag) < (n5 |> untag)
     --> True
@@ -279,13 +276,11 @@ tag tag_ untyped =
 -}
 untag : Typed tag_ creator_ Public untyped -> untyped
 untag =
-    \(Typed _ untyped) -> untyped
+    Typed.Internal.untag
 
 
-{-| If you have an [`Internal`](#Internal) [`Typed`](#Typed),
-its untyped thing can't be read by everyone.
-
-If you have access to the tag, you can access its untyped thing
+{-| Only those who can show the tag
+can access the [`Typed`](#Typed) [`Internal`](#Internal):
 
     import Typed exposing (Checked, Internal, Typed)
 
@@ -295,7 +290,7 @@ If you have access to the tag, you can access its untyped thing
             ListOptimizedTag
             Internal
             -- optimizations might change in the future
-            { list : List (() -> element)
+            { list : List element
             , length : Int
             }
 
@@ -307,26 +302,11 @@ If you have access to the tag, you can access its untyped thing
             listOptimized
                 |> Typed.internal ListOptimized
                 |> .list
-                |> List.map (\lazy -> lazy ())
 
     type ListOptimizedTag
         = ListOptimized
 
     equal =
-        let
-            listLazyEqual =
-                \( listA, listB ) ->
-                    case ( listA, listB ) of
-                        ( [], _ ) ->
-                            False
-
-                        ( _, [] ) ->
-                            False
-
-                        ( aHead :: aTail, bHead :: bTail ) ->
-                            (aHead () == bTail ())
-                                && (( aTail, bTail ) |> listLazyEqual)
-        in
         \( listOptimizedA, listOptimizedB ) ->
             let
                 a =
@@ -335,10 +315,11 @@ If you have access to the tag, you can access its untyped thing
                 b =
                     listOptimizedB |> Typed.internal ListOptimized
             in
-            (a.length == b.length)
-                && (( a.list, b.list ) |> listLazyEqual)
+            if a.length /= b.length then
+                False
 
-Note: this is not all that optimized.
+            else
+                a.list == b.list
 
 [`internal`](#internal) can be seen as
 a shortcut for [`toPublic`](#toPublic), then [`untag`](#untag)
@@ -360,7 +341,7 @@ internal tagConfirmation =
             |> untag
 
 
-{-| If you have an [`Internal`](#Internal) [`Typed`](#Typed),
+{-| If you have a [`Typed`](#Typed) [`Internal`](#Internal),
 its untyped thing can't be read by everyone.
 
 If you have access to the tag, you can access its untyped thing
@@ -396,7 +377,7 @@ wrapInternal tagWrapConfirmation =
 
 
 {-| Confirm that it can be considered [`Public`](#Public) by supplying the matching tag.
-Now you can annotate or use it as [`Internal`](#Internal)/[`Public`](#Public)
+The result can be annotated or used as [`Internal`](#Internal)/[`Public`](#Public)
 
     internal tag =
         toPublic tag >> untag
@@ -409,12 +390,12 @@ toPublic :
          -> Typed creator tag accessRightPublic_ untyped
         )
 toPublic tagConfirmation =
-    \(Typed _ untyped) ->
-        untyped |> Typed tagConfirmation
+    \typed ->
+        typed |> Typed.Internal.toPublic tagConfirmation
 
 
 {-| Confirm that it can be considered [`Public`](#Public) by supplying the matching tag.
-Now you can annotate or use it as [`Internal`](#Internal)/[`Public`](#Public)
+The result can be annotated or used as [`Internal`](#Internal)/[`Public`](#Public)
 
     internal tag =
         toPublic tag >> untag
@@ -427,8 +408,8 @@ wrapToPublic :
          -> Typed creator ( tagWrap, tagWrapped ) accessRightPublic_ untyped
         )
 wrapToPublic tagConfirmation =
-    \(Typed ( _, tagWrapped ) untyped) ->
-        untyped |> Typed ( tagConfirmation, tagWrapped )
+    \typed ->
+        typed |> Typed.Internal.wrapToCheckedPublic tagConfirmation
 
 
 
@@ -436,9 +417,10 @@ wrapToPublic tagConfirmation =
 
 
 {-| Confirm that it can be considered [`Checked`](#Checked) by supplying the matching tag.
-Annotate or use it as [`Tagged`](#Tagged)/[`Checked`](#Checked)
+Annotate or use the result as [`Tagged`](#Tagged)/[`Checked`](#Checked)
 
-    module Even exposing (Even, add, multiply)
+    -- module Even exposing (Even, add, multiply)
+
 
     import Typed exposing (Checked, Public, Typed)
 
@@ -464,7 +446,7 @@ Annotate or use it as [`Tagged`](#Tagged)/[`Checked`](#Checked)
                     (\( int, toAddInt ) -> int + toAddInt)
                 |> Typed.toChecked Even
 
-If the tag would change after [`map`](#map) however, use [`mapTo`](#mapTo)
+If the tag should change after [`map`](#map), [`mapTo`](#mapTo)
 
     oddAddOdd : Odd -> Odd -> Even
     oddAddOdd oddToAdd =
@@ -472,7 +454,7 @@ If the tag would change after [`map`](#map) however, use [`mapTo`](#mapTo)
             odd
                 |> Typed.and oddToAdd
                 -- ↓ same as mapTo Even (\( o0, o1 ) -> o0 + 01)
-                |> Typed.map (\( o0, o1 ) -> o0 + 1)
+                |> Typed.map (\( o0, o1 ) -> o0 + o1)
                 |> Typed.toChecked Even
 
 [`mapTo`](#mapTo) is better here since you don't have weird intermediate results like
@@ -480,7 +462,7 @@ If the tag would change after [`map`](#map) however, use [`mapTo`](#mapTo)
     odd
         -- : Odd
         |> Typed.and oddToAdd
-        |> Typed.map (\( o0, o1 ) -> o0 + 1)
+        |> Typed.map (\( o0, o1 ) -> o0 + o1)
         --: Typed Tagged OddTag Public Int
         |> ...
 
@@ -492,8 +474,10 @@ toChecked :
          -> Typed creatorChecked_ tag accessRight untyped
         )
 toChecked tagConfirmation =
-    \(Typed _ untyped) ->
-        untyped |> Typed tagConfirmation
+    \typed ->
+        typed
+            |> internal tagConfirmation
+            |> tag tagConfirmation
 
 
 
@@ -526,8 +510,11 @@ mapTo :
          -> Typed mappedCreatorChecked_ mappedTag mappedAccessRightPublic_ mappedUntyped
         )
 mapTo mappedTag untypedChange =
-    \(Typed _ untyped) ->
-        untyped |> untypedChange |> Typed mappedTag
+    \typed ->
+        typed
+            |> untag
+            |> untypedChange
+            |> tag mappedTag
 
 
 {-| [`map`](#map), then put the existing tag after a given wrapper tag
@@ -558,17 +545,24 @@ mapToWrap :
     mappedTagWrap
     -> (untyped -> mappedUntyped)
     ->
-        (Typed creator_ tag accessRight untyped
+        (Typed creator_ tag Public untyped
          ->
             Typed
                 mappedCreatorChecked_
                 ( mappedTagWrap, tag )
-                accessRight
+                mappedAccessRightPublic_
                 mappedUntyped
         )
 mapToWrap mappedTagWrap untypedChange =
-    \(Typed tag_ untyped) ->
-        untyped |> untypedChange |> Typed ( mappedTagWrap, tag_ )
+    \typed ->
+        tag mappedTagWrap ()
+            |> wrapAnd typed
+            |> map
+                (\( (), wrappedUntyped ) ->
+                    wrappedUntyped |> untypedChange
+                )
+            |> wrapToChecked mappedTagWrap
+            |> wrapToPublic mappedTagWrap
 
 
 {-| Allow the creator to be [`Checked`](#Checked) by supplying the wrapper tag
@@ -588,17 +582,18 @@ mapToWrap mappedTagWrap untypedChange =
 wrapToChecked :
     tagWrap
     ->
-        (Typed creator_ ( tagWrap, tag ) accessRight untyped
-         -> Typed creatorCheck_ ( tagWrap, tag ) accessRight untyped
+        (Typed creator_ ( tagWrap, tagWrapped ) accessRight untyped
+         -> Typed creatorChecked_ ( tagWrap, tagWrapped ) accessRight untyped
         )
-wrapToChecked mappedTag =
-    \(Typed ( _, tag_ ) untyped) ->
-        untyped |> Typed ( mappedTag, tag_ )
+wrapToChecked tagWrapConfirmation =
+    \typed ->
+        typed |> Typed.Internal.wrapToCheckedPublic tagWrapConfirmation
 
 
 {-| Change the untyped thing.
 
-If the creator is [`Checked`](#Checked), it becomes just [`Tagged`](#Tagged)
+The result is not [`Checked`](#Checked),
+so it becomes just [`Tagged`](#Tagged)
 
     import Typed exposing (Public, Tagged, Typed)
 
@@ -609,7 +604,8 @@ If the creator is [`Checked`](#Checked), it becomes just [`Tagged`](#Tagged)
     add1km =
         Typed.map (\m -> m + 1000)
 
-If you want to confirm that the [`map`](#map)s result is [`Checked`](#Checked), [`toChecked`](#toChecked)
+To confirm that the [`map`](#map)s result is [`Checked`](#Checked)
+→ [`toChecked`](#toChecked)
 
     import Typed exposing (Checked, Public, Typed)
 
@@ -634,35 +630,14 @@ map :
          -> Typed Tagged tag accessRight mappedUntyped
         )
 map untypedChange =
-    \(Typed tag_ untyped) ->
-        untyped |> untypedChange |> Typed tag_
+    \typed ->
+        typed |> Typed.Internal.map untypedChange
 
 
 {-| Use the untyped thing to return a [`Typed`](#Typed)
-with the **same tag & access rights**
+with the **same tag & access right**
 
-    module Home exposing (catOnUnhappyFeed)
-
-    import Cat
-    import Typed
-
-    catOnUnhappyFeed : Cat -> Cat
-    catOnUnhappyFeed =
-        cat
-            |> Typed.mapToTyped
-                (\catState ->
-                    case catState.mood of
-                        Unhappy ->
-                            cat |> Cat.feed
-
-                        Happy ->
-                            cat
-                )
-
-using
-
-    module Cat exposing (Cat, feed)
-
+    -- module Cat exposing (Cat, feed)
     import Typed
 
     type alias Cat =
@@ -679,6 +654,23 @@ using
                 { cat | foodReserves = cat.foodReserves + 10 }
             )
 
+    -- in another module
+    import Cat
+    import Typed
+
+    catOnUnhappyFeed : Cat -> Cat
+    catOnUnhappyFeed =
+        cat
+            |> Typed.mapToTyped
+                (\catState ->
+                    case catState.mood of
+                        Unhappy ->
+                            cat |> Cat.feed
+
+                        Happy ->
+                            cat
+                )
+
 Map multiple arguments with [`and`](#and)
 
 -}
@@ -691,8 +683,8 @@ mapToTyped :
          -> Typed creatorMapped tag accessRight mappedUntyped
         )
 mapToTyped untypedMapToTyped =
-    \(Typed _ untyped) ->
-        untyped |> untypedMapToTyped
+    \typed ->
+        typed |> Typed.Internal.mapToTyped untypedMapToTyped
 
 
 {-|
@@ -703,8 +695,7 @@ mapToTyped untypedMapToTyped =
 
 #### into [`map`](#map)
 
-    module Prime exposing (Prime, n3, n5)
-
+    -- module Prime exposing (Prime, n3, n5)
     import Typed exposing (Checked, Public, Typed, mapToTyped, tag)
 
     type alias Prime =
@@ -722,8 +713,8 @@ mapToTyped untypedMapToTyped =
         tag Prime 5
 
     -- module NonPrime exposing (NonPrime)
-    -- import Prime exposing (Prime)
-    --
+    import Prime exposing (Prime)
+
     type alias NonPrime =
         Typed Checked NonPrimeTag Public Int
 
@@ -738,7 +729,7 @@ mapToTyped untypedMapToTyped =
 
 #### into [`mapToTyped`](#mapToTyped)
 
-    module Typed.Int
+    -- module Typed.Int
 
     smaller : Typed create tag access Int -> Typed create tag access Int -> Typed create tag access Int
     smaller =
@@ -771,14 +762,7 @@ and :
         )
 and typedFoodLater =
     \typedFoodEarlier ->
-        let
-            (Typed tag_ foodEarlier) =
-                typedFoodEarlier
-
-            (Typed _ foodLater) =
-                typedFoodLater
-        in
-        ( foodEarlier, foodLater ) |> tag tag_
+        typedFoodEarlier |> Typed.Internal.and typedFoodLater
 
 
 {-| [`and`](#and) which keeps the tag from the first [`Typed`](#Typed) in the chain as the wrapping tag
@@ -792,7 +776,7 @@ and typedFoodLater =
     hashBy :
         Map mapTag (thing -> thingMapped)
         -> Hashing thingHashingTag thingMapped
-        -> Hashing ( HashBy, ( mapTag, thingHashingTag, ) ) thingMapped
+        -> Hashing ( HashBy, ( mapTag, thingHashingTag ) ) thingMapped
     hashBy map mappedHashing =
         map
             |> Typed.wrapAnd mappedHashing
@@ -810,12 +794,5 @@ wrapAnd :
          -> Typed Tagged ( tagWrap, tagFood ) accessRight ( untyped, nextUntyped )
         )
 wrapAnd typedFoodLater =
-    \typedFoodEarlier ->
-        let
-            (Typed tagWrap foodEarlier) =
-                typedFoodEarlier
-
-            (Typed tag_ foodLater) =
-                typedFoodLater
-        in
-        ( foodEarlier, foodLater ) |> tag ( tagWrap, tag_ )
+    \typed ->
+        typed |> Typed.Internal.wrapAnd typedFoodLater
