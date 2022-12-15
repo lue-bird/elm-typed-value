@@ -2,11 +2,14 @@
 
 ## 8.0.0
 
-- `isChecked` type correct
-- `andWrap` add
-- `mapWrap` add
-- `mapUnwrap` add
-- `wrapIsChecked` add
+- `isChecked` name → `toChecked` with type correct
+- `mapTo` add
+- `toPublic` add
+- `wrapAnd` add
+- `mapToWrap` add
+- `wrapInternal` add
+- `wrapToChecked` add
+- `wrapToPublic` add
 
 #### 7.0.1
 
@@ -34,7 +37,7 @@
 ## 6.0.0
 
 - now crashes when `Typed`s are checked with `(==)`
-- corrected `isChecked` argument annotation (`whoCanAccess` needs to be the same as of the result)
+- corrected `isChecked` argument annotation (`accessRight` needs to be the same as of the result)
 - allowed calling `internalVal` on `Public` `Typed`s too
 - allowed calling `theSmaller` and `theGreater` with `Internal` too
 - allowed calling `map2` with different `value`s
@@ -76,7 +79,7 @@ Renamed `Val` module & type back to `Typed`
 
 ## 2.0.0
 
-Changed `Typed tag value { createdBy : whoCanCreate, canAccess : whoCanAccess }` to `Val whoCanCreate tag whoCanAccess value`.
+Changed `Typed tag value { createdBy : creator, canAccess : accessRight }` to `Val creator tag accessRight value`.
 
 - `Checked tag value` is now `Val Checked tag Public value`
 - `Tagged tag value` is now `Val Tagged tag Public value`
