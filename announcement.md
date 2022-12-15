@@ -87,7 +87,7 @@ sortingKey :
     -> Sorting element ( keyTag, keyOrderTag ) key
 sortingKey toKeyTyped keyOrdering =
     toKeyTyped
-        |> Typed.andWrap keyOrdering
+        |> Typed.wrapAnd keyOrdering
         --: Typed ( keyTag, keyOrderTag ) Tagged Public ...
         |> Typed.mapToWrap Sorting
             (\( toKey, keyOrder ) ->
