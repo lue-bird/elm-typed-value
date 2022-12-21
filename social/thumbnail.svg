@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="thumbnail.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:snap-object-midpoints="true"
+     inkscape:zoom="0.58439955"
+     inkscape:cx="394.42193"
+     inkscape:cy="283.19666"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#000000;stroke-width:1;stroke-linecap:round;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect846"
+       width="391.50674"
+       height="195.75337"
+       x="-97.102959"
+       y="14.183615"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616" />
+    <rect
+       style="fill:#00a042;fill-opacity:1;stroke:none;stroke-width:1.46697;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
+       id="rect1347-6"
+       width="34.810551"
+       height="34.810551"
+       x="-75.725204"
+       y="169.77313"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616"
+       transform="rotate(-45)" />
+    <path
+       style="fill:none;fill-opacity:1;stroke:#ff3800;stroke-width:17.781;stroke-linecap:square;stroke-miterlimit:4;stroke-dasharray:17.781, 35.562;stroke-dashoffset:0;stroke-opacity:0.16234376;paint-order:fill markers stroke;stroke-linejoin:miter"
+       id="path64746"
+       sodipodi:type="arc"
+       sodipodi:cx="91.109314"
+       sodipodi:cy="153.95667"
+       sodipodi:rx="76.231728"
+       sodipodi:ry="76.231728"
+       sodipodi:start="2.8370627"
+       sodipodi:end="0.54783874"
+       sodipodi:arc-type="arc"
+       d="M 18.385161,176.81435 A 76.231728,76.231728 0 0 1 51.654235,88.729577 76.231728,76.231728 0 0 1 145.11649,100.1561 76.231728,76.231728 0 0 1 156.1847,193.66146"
+       sodipodi:open="true"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616" />
+    <path
+       id="rect1347-6-7"
+       style="fill:#00ff65;fill-opacity:1;stroke-width:1.46696;stroke-linecap:round;paint-order:fill markers stroke"
+       d="m 41.887146,148.97896 49.229554,2e-5 -24.61477,24.61474 z"
+       sodipodi:nodetypes="ccccc"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616" />
+    <path
+       id="rect1347-6-6"
+       style="fill:#ff3800;fill-opacity:1;stroke-width:2.93393;stroke-linecap:round;paint-order:fill markers stroke"
+       d="m 160.73781,30.128427 -69.621122,69.621047 4.9e-5,-69.621055 z"
+       sodipodi:nodetypes="ccccc"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616" />
+    <path
+       id="rect1347-6-6-6"
+       style="fill:#00a042;fill-opacity:1;stroke-width:2.93393;stroke-linecap:round;paint-order:fill markers stroke"
+       d="m 140.34622,148.97901 -98.459074,-5e-5 49.229548,-49.22959 z"
+       sodipodi:nodetypes="ccccc"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616" />
+    <path
+       id="rect1347-6-7-6-1"
+       style="fill:#00ff65;fill-opacity:1;stroke-width:1.46696;stroke-linecap:round;paint-order:fill markers stroke"
+       d="m 91.116707,148.97894 49.229563,6e-5 -24.61478,24.61474 z"
+       sodipodi:nodetypes="ccccc"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616" />
+    <path
+       id="rect1347-6-7-6-1-8"
+       style="fill:#832c02;fill-opacity:1;stroke-width:1.46696;stroke-linecap:round;paint-order:fill markers stroke"
+       d="m 115.73142,124.36427 -3e-5,-49.229631 -24.614696,24.614731 z"
+       sodipodi:nodetypes="ccccc"
+       inkscape:export-filename="/home/pascal/Desktop/for-dev/elm-typed-value/social/thumbnail.png"
+       inkscape:export-xdpi="66.434616"
+       inkscape:export-ydpi="66.434616" />
+  </g>
+</svg>
