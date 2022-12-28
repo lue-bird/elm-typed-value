@@ -1,5 +1,9 @@
 # changelog
 
+#### 8.0.1
+
+  - documentation examples correct
+
 ## 8.0.0
 
 - `isChecked` name → `toChecked` with type correct
