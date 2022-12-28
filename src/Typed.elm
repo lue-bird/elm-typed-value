@@ -525,10 +525,10 @@ mapTo mappedTag untypedChange =
     type Each
         = Each
 
-    reverse :
+    each :
         Hashing element elementHashTag
         -> Hashing (List element) ( Each, elementHashTag )
-    reverse elementHashing =
+    each elementHashing =
         Typed.mapToWrap Each
             (\elementToHash ->
                 \list ->
@@ -576,7 +576,7 @@ mapToWrap mappedTagWrap untypedChange =
         |> Typed.map ...
         --: Typed Tagged ( Reverse, Int.Order.Increasing ) Public ...
         |> Typed.wrapToChecked Reverse
-    --: Typed Checked ( Reverse, Int.Order.Increasing ) Public ...
+        --: Typed Checked ( Reverse, Int.Order.Increasing ) Public ...
 
 -}
 wrapToChecked :
@@ -696,6 +696,8 @@ mapToTyped untypedMapToTyped =
 #### into [`map`](#map)
 
     -- module Prime exposing (Prime, n3, n5)
+
+
     import Typed exposing (Checked, Public, Typed, mapToTyped, tag)
 
     type alias Prime =
@@ -713,8 +715,7 @@ mapToTyped untypedMapToTyped =
         tag Prime 5
 
     -- module NonPrime exposing (NonPrime)
-    import Prime exposing (Prime)
-
+    -- import Prime exposing (Prime)
     type alias NonPrime =
         Typed Checked NonPrimeTag Public Int
 
