@@ -6,7 +6,8 @@ module Typed exposing
     , Internal, internal
     , map, mapToTyped, mapTo, replace
     , and
-    , mapToWrap, wrapToChecked
+    , mapToWrap, mapUnwrap
+    , wrapToChecked
     , wrapToPublic, wrapInternal
     , wrapAnd
     )
@@ -51,7 +52,8 @@ A pretty specialized use-case which helps using tags you don't have access to _i
 
 Examples in the [version 8 announcement](https://github.com/lue-bird/elm-typed-value/blob/master/announcement.md#800)
 
-@docs mapToWrap, wrapToChecked
+@docs mapToWrap, mapUnwrap
+@docs wrapToChecked
 @docs wrapToPublic, wrapInternal
 @docs wrapAnd
 
@@ -618,6 +620,50 @@ mapToWrap mappedTagWrap untypedChange =
                 )
             |> wrapToChecked mappedTagWrap
             |> wrapToPublic mappedTagWrap
+
+
+{-| Change its untyped thing and adapt the inner, wrapped tag
+
+The result has the same access right as before but is [`Tagged`](#Tagged)
+since we haven't verified the changed thing
+
+    -- module Secret exposing (SecretTag, secret)
+
+    type SecretTag
+        = Secret
+
+    secret :
+        Typed creator_ kind Public a
+        -> Typed Checked ( SecretTag, kind ) Internal a
+    secret =
+        Typed.mapToWrap Secret
+
+    encrypt :
+        Typed Checked ( SecretTag, kind ) Internal String
+        -> Typed Checked kind Internal { encrypted : String }
+    encrypt =
+        Typed.mapUnwrap ...
+
+    -- for example in another module
+
+    type DiaryTag
+        = Diary
+
+    diary : Typed Checked DiaryTag Internal { encrypted : String }
+    diary =
+        secret (Typed.tag Diary "dear diary")
+            --: Typed Checked ( SecretTag, DiaryTag ) Internal String
+            |> Secret.encrypt
+
+Use [`mapToWrap`](#mapToWrap) to wrap the unwrapped thing again with a different tag
+
+-}
+mapUnwrap :
+    (untyped -> mappedUntyped)
+    -> Typed creator_ ( tagWrap_, tagWrapped ) accessRight untyped
+    -> Typed Tagged tagWrapped accessRight mappedUntyped
+mapUnwrap untypedMap =
+    \typed -> typed |> Typed.Internal.mapUnwrap untypedMap
 
 
 {-| Allow the creator to be [`Checked`](#Checked) by supplying the wrapper tag

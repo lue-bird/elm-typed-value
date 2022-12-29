@@ -4,7 +4,7 @@ module Typed.Internal exposing
     , tag
     , wrapToCheckedPublic
     , toPublic, untag
-    , map, mapToTyped, replace
+    , map, mapToTyped, replace, mapUnwrap
     , and, wrapAnd
     )
 
@@ -41,7 +41,7 @@ The goal is as always to trim the size of this `module` as much as possible.
 
 ## transform
 
-@docs map, mapToTyped, replace
+@docs map, mapToTyped, replace, mapUnwrap
 @docs and, wrapAnd
 
 -}
@@ -147,6 +147,15 @@ replace :
 replace untypedReplacement =
     \(Typed tag_ _) ->
         untypedReplacement |> Typed tag_
+
+
+mapUnwrap :
+    (untyped -> mappedUntyped)
+    -> Typed creator_ ( tagWrap_, tagWrapped ) accessRight untyped
+    -> Typed Tagged tagWrapped accessRight mappedUntyped
+mapUnwrap untypedMap =
+    \(Typed ( _, tagWrapped ) untyped) ->
+        Typed tagWrapped (untyped |> untypedMap)
 
 
 and :
