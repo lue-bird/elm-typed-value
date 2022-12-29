@@ -1,5 +1,9 @@
 # changelog
 
+## 8.2.0
+
+  - `mapUnwrap` add
+
 ### 8.1.0
 
   - `replace` add
