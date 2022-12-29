@@ -4,7 +4,8 @@ module Typed exposing
     , Tagged, Checked, toChecked
     , Public, untag, toPublic
     , Internal, internal
-    , map, mapToTyped, mapTo, and
+    , map, mapToTyped, mapTo, replace
+    , and
     , mapToWrap, wrapToChecked
     , wrapToPublic, wrapInternal
     , wrapAnd
@@ -40,7 +41,8 @@ module Typed exposing
 
 ## transform
 
-@docs map, mapToTyped, mapTo, and
+@docs map, mapToTyped, mapTo, replace
+@docs and
 
 
 ## wrapping
@@ -515,6 +517,59 @@ mapTo mappedTag untypedChange =
             |> untag
             |> untypedChange
             |> tag mappedTag
+
+
+{-| Swap out its untyped thing for a given replacement.
+The tag will stay the same but as with [`map`](#map), the creator will be set to [`Tagged`](#Tagged).
+
+Prefer over [`map`](#map) if you need to allow the result to be [`Public`](#Public)
+
+    type SecretTag
+        = Shhh
+
+    secret : Typed Checked SecretTag Internal String
+    secret =
+        Typed.tag Shhh "dear diary"
+
+    encrypt :
+        Typed Checked SecretTag Internal String
+        -> Typed Checked SecretTag Internal String
+
+    secret
+        |> Typed.replace "since I can't read the secret here, we can make it Public"
+        --: Typed Tagged SecretTag Public String
+        |> Typed.untag
+    --> "since I can't read the secret here, we can make it Public"
+
+Also useful if you want to keep a tag for a different type:
+
+    type alias Vault secretTag =
+        Typed Tagged secretTag Internal { encrypted : ( String, List String ) }
+
+    for
+        ( Typed Checked tag Internal String
+        , List (Typed Checked tag Internal String)
+        )
+        -> (Vault tag
+           -> Vault tag
+           )
+    for ( secretOne, secretOthers ) =
+        \vault ->
+            secretOne
+                |> Typed.replace
+                    { encrypted =
+                        ( secretOne |> encrypt, secretOthers |> List.map encrypt )
+                    }
+
+-}
+replace :
+    untypedReplacement
+    ->
+        (Typed creator_ tag accessRight_ untyped_
+         -> Typed Tagged tag accessRightPublic_ untypedReplacement
+        )
+replace untypedReplacement =
+    \typed -> typed |> Typed.Internal.replace untypedReplacement
 
 
 {-| [`map`](#map), then put the existing tag after a given wrapper tag
