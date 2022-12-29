@@ -663,7 +663,10 @@ mapUnwrap :
     -> Typed creator_ ( tagWrap_, tagWrapped ) accessRight untyped
     -> Typed Tagged tagWrapped accessRight mappedUntyped
 mapUnwrap untypedMap =
-    \typed -> typed |> Typed.Internal.mapUnwrap untypedMap
+    \typed ->
+        typed
+            |> map untypedMap
+            |> Typed.Internal.tagMap (\( _, tagWrapped ) -> tagWrapped)
 
 
 {-| Allow the creator to be [`Checked`](#Checked) by supplying the wrapper tag
@@ -732,7 +735,11 @@ map :
         )
 map untypedChange =
     \typed ->
-        typed |> Typed.Internal.map untypedChange
+        typed
+            |> mapToTyped
+                (\untyped ->
+                    typed |> replace (untyped |> untypedChange)
+                )
 
 
 {-| Use the untyped thing to return a [`Typed`](#Typed)

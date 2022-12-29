@@ -4,7 +4,7 @@ module Typed.Internal exposing
     , tag
     , wrapToCheckedPublic
     , toPublic, untag
-    , map, mapToTyped, replace, mapUnwrap
+    , mapToTyped, replace, tagMap
     , and, wrapAnd
     )
 
@@ -41,7 +41,7 @@ The goal is as always to trim the size of this `module` as much as possible.
 
 ## transform
 
-@docs map, mapToTyped, replace, mapUnwrap
+@docs mapToTyped, replace, tagMap
 @docs and, wrapAnd
 
 -}
@@ -76,7 +76,7 @@ tag :
     -> untyped
     -> Typed creatorChecked_ tag accessRightPublic_ untyped
 tag tag_ untyped =
-    untyped |> Typed tag_
+    Typed tag_ untyped
 
 
 
@@ -96,7 +96,7 @@ toPublic :
         )
 toPublic tagConfirmation =
     \(Typed _ untyped) ->
-        untyped |> Typed tagConfirmation
+        tag tagConfirmation untyped
 
 
 wrapToCheckedPublic :
@@ -107,22 +107,11 @@ wrapToCheckedPublic :
         )
 wrapToCheckedPublic tagConfirmation =
     \(Typed ( _, tagWrapped ) untyped) ->
-        untyped |> Typed ( tagConfirmation, tagWrapped )
+        tag ( tagConfirmation, tagWrapped ) untyped
 
 
 
 --
-
-
-map :
-    (untyped -> mappedUntyped)
-    ->
-        (Typed creator_ tag accessRight untyped
-         -> Typed Tagged tag accessRight mappedUntyped
-        )
-map untypedChange =
-    \(Typed tag_ untyped) ->
-        untyped |> untypedChange |> Typed tag_
 
 
 mapToTyped :
@@ -146,16 +135,16 @@ replace :
         )
 replace untypedReplacement =
     \(Typed tag_ _) ->
-        untypedReplacement |> Typed tag_
+        tag tag_ untypedReplacement
 
 
-mapUnwrap :
-    (untyped -> mappedUntyped)
-    -> Typed creator_ ( tagWrap_, tagWrapped ) accessRight untyped
-    -> Typed Tagged tagWrapped accessRight mappedUntyped
-mapUnwrap untypedMap =
-    \(Typed ( _, tagWrapped ) untyped) ->
-        Typed tagWrapped (untyped |> untypedMap)
+tagMap :
+    (tag -> mappedTag)
+    -> Typed creator_ tag accessRight untyped
+    -> Typed Tagged mappedTag accessRight untyped
+tagMap tagChange =
+    \(Typed tag_ untyped) ->
+        tag (tag_ |> tagChange) untyped
 
 
 and :
@@ -173,7 +162,7 @@ and typedFoodLater =
             (Typed _ foodLater) =
                 typedFoodLater
         in
-        ( foodEarlier, foodLater ) |> tag tag_
+        tag tag_ ( foodEarlier, foodLater )
 
 
 wrapAnd :
@@ -191,4 +180,4 @@ wrapAnd typedFoodLater =
             (Typed tag_ foodLater) =
                 typedFoodLater
         in
-        ( foodEarlier, foodLater ) |> tag ( tagWrap, tag_ )
+        tag ( tagWrap, tag_ ) ( foodEarlier, foodLater )
