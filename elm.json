@@ -3,7 +3,7 @@
     "name": "lue-bird/elm-typed-value",
     "summary": "a type with 1 variant but convenient",
     "license": "MIT",
-    "version": "8.0.1",
+    "version": "8.1.0",
     "exposed-modules": [
         "Typed"
     ],
