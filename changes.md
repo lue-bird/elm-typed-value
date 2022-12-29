@@ -1,5 +1,9 @@
 # changelog
 
+### 8.1.0
+
+  - `replace` add
+
 #### 8.0.1
 
   - documentation examples correct
