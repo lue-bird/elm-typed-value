@@ -666,7 +666,7 @@ mapUnwrap untypedMap =
     \typed ->
         typed
             |> map untypedMap
-            |> Typed.Internal.tagMap (\( _, tagWrapped ) -> tagWrapped)
+            |> Typed.Internal.unwrap
 
 
 {-| Allow the creator to be [`Checked`](#Checked) by supplying the wrapper tag
