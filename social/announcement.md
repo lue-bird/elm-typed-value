@@ -3,7 +3,7 @@
 [`Typed`](https://dark.elm.dmy.fr/packages/lue-bird/elm-typed-value/latest/) 8's power:
 wrapping a generic typed.
 
-As an example how [`KeySet`](https://dark.elm.dmy.fr/packages/lue-bird/elm-keysset/latest/KeySet)
+As an example how [`KeySet`](https://dark.elm.dmy.fr/packages/lue-bird/elm-keyset/latest/KeySet)
 uses [`Typed`](https://dark.elm.dmy.fr/packages/lue-bird/elm-typed-value/latest/)
 ```elm
 type alias Ordering a tag =
@@ -49,20 +49,20 @@ sortingKey :
     -> Ordering key keyOrderTag
     -> Sorting element ( keyTag, keyOrderTag ) key
 
-type alias KeysSet element tag =
+type alias KeySet element tag =
     Typed Checked tag Internal ..internals..
 
 insert :
     Sorting element tag key_
     -> element
-    -> KeysSet element tag
-    -> KeysSet element tag
+    -> KeySet element tag
+    -> KeySet element tag
 
 remove :
     Sorting element tag key
     -> key
-    -> KeysSet element tag
-    -> KeysSet element tag
+    -> KeySet element tag
+    -> KeySet element tag
 ```
 ```elm
 KeySet.empty
@@ -103,7 +103,7 @@ type Reverse
 
 reverse : Ordering subject tag -> Ordering subject ( Reverse, tag )
 reverse =
-    Typed.mapToWrap Reverse (\order -> \a b -> order a b |> ..reverse..)
+    Typed.mapToWrap Reverse (\order -> \a b -> order b a)
 ```
 Notice how we don't have access to the tag of the argument
 but can still safely show it in the signature.
@@ -115,10 +115,22 @@ type Reverse tag
 
 reverse : Ordering subject tag -> Ordering subject (Reverse tag)
 reverse =
-    Typed.mapTo Reverse (\order -> \a b -> order a b |> ..reverse..)
+    Typed.mapTo Reverse (\order -> \a b -> order b a)
 
 reverseOops : Ordering subject orderTag -> Ordering subject (Reverse tag)
 ```
-The reversed tag can accidentally be anything :(
+The reversed tag can accidentally be anything. It's a free variable :(
 
-Sadly they're sometimes more readable for multiple tag arguments, so choose what you like best (hopefully safety 🥺).
+Sadly that's sometimes more readable for multiple tag arguments. A quick solution:
+```elm
+type alias Reverse orderTag =
+    ( ReverseTag, orderTag )
+
+type ReverseTag
+    = Reverse
+
+reverse : Ordering subject tag -> Ordering subject (Reverse tag)
+reverse =
+    Typed.mapToWrap Reverse (\order -> \a b -> order b a)
+```
+Makes it safe, makes brain happy!
